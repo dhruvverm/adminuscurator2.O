@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
 
+/** Mark geometry on a 48×48 grid (source files: public/brand/). */
+export const MARK = {
+  cap: "M20.5 7L27.5 7L31.5 15L16.5 15Z",
+  mid: ["M14 20L21.5 20L17.5 28L10 28Z", "M34 20L26.5 20L30.5 28L38 28Z"],
+  base: ["M7.5 33L15 33L11 41L3.5 41Z", "M40.5 33L33 33L37 41L44.5 41Z"],
+};
+
 /** Default logo mark. Replace by setting `siteConfig.logo.src`. */
 export function LogoMark({ className = "logo__mark" }: { className?: string }) {
   if (siteConfig.logo.src) {
@@ -8,13 +15,18 @@ export function LogoMark({ className = "logo__mark" }: { className?: string }) {
     return <img src={siteConfig.logo.src} alt="" className={className} width={32} height={32} />;
   }
   return (
-    <span className={`${className} logo__mark--default`} aria-hidden="true">
-      <svg viewBox="0 0 32 32">
-        {/* "A" whose crossbar is a single curated dot */}
-        <path d="M9.5 23.5 16 8.5l6.5 15" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="16" cy="18.3" r="2.1" fill="#fff" />
-      </svg>
-    </span>
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      {/* "Curated Stack": five blocks on a 1:2 slope rising to one curated capstone */}
+      <g strokeWidth="2.5" strokeLinejoin="round">
+        {MARK.base.map((d) => (
+          <path key={d} d={d} className="logo__base" />
+        ))}
+        {MARK.mid.map((d) => (
+          <path key={d} d={d} className="logo__mid" />
+        ))}
+        <path d={MARK.cap} className="logo__cap" />
+      </g>
+    </svg>
   );
 }
 

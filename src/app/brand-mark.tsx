@@ -1,19 +1,15 @@
+import { MARK } from "@/components/ui/Logo";
+
 /** Logo mark for generated images (Open Graph, Apple touch icon). */
-export function BrandMark({ size, primary, accent, radius = 0.28 }: { size: number; primary: string; accent: string; radius?: number }) {
+export function BrandMark({ size, colors }: { size: number; colors: { base: string; mid: string; cap: string; baseOp?: number; midOp?: number } }) {
+  const block = (d: string, fill: string, opacity = 1) => (
+    <path key={d} d={d} fill={fill} stroke={fill} strokeWidth="2.5" strokeLinejoin="round" opacity={opacity} />
+  );
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size * radius,
-        background: `linear-gradient(135deg, ${primary}, ${accent})`,
-        display: "flex",
-      }}
-    >
-      <svg width={size} height={size} viewBox="0 0 32 32">
-        <path d="M9.5 23.5 16 8.5l6.5 15" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="16" cy="18.3" r="2.1" fill="#fff" />
-      </svg>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 48 48">
+      {MARK.base.map((d) => block(d, colors.base, colors.baseOp))}
+      {MARK.mid.map((d) => block(d, colors.mid, colors.midOp))}
+      {block(MARK.cap, colors.cap)}
+    </svg>
   );
 }
