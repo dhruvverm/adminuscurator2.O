@@ -87,6 +87,24 @@ Password-reset emails and contact-form notifications go through `src/lib/email.t
 
 ---
 
+## Hosting
+
+### GitHub Pages (live now: marketing site only)
+
+`.github/workflows/pages.yml` publishes a **static** version of the site on every push to `main`. It builds with `NEXT_PUBLIC_STATIC_EXPORT=true`.
+
+GitHub Pages can't run a server, so the static build:
+* includes every marketing, pricing, legal and resource page;
+* leaves out sign-up, login, checkout, the customer dashboard and admin (`scripts/prepare-static.mjs` removes them in CI only);
+* sends "Get Started" and plan buttons to the contact form;
+* sends the contact form to a form service. Set a repository **Actions variable** `FORM_ENDPOINT` (e.g. a Formspree URL). Without it, the form opens the visitor's email app pre-filled.
+
+Admin edits don't apply to the static site. Edit prices, features, testimonials and FAQs in `src/content/managed-defaults.ts` and push. Analytics IDs can be set as the Actions variables `GA_MEASUREMENT_ID`, `GTM_ID` and `META_PIXEL_ID`.
+
+### Full app (accounts, checkout, admin)
+
+This needs a Node host. Render or Railway with a persistent disk works as-is. Vercel needs a database in place of the JSON store (see below). Deploy with `npm run build && npm start` and the environment variables from `.env.example`.
+
 ## Data storage
 
 `src/lib/store.ts` is a small JSON-file store at `data/store.json` (git-ignored) that holds users, orders, messages and admin-edited content. It suits development and single-server hosting.

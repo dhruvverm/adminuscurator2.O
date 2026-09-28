@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { mainNav, siteConfig } from "@/config/site";
+import { mainNav, routes, siteConfig } from "@/config/site";
 import { Icon } from "@/components/ui/Icon";
 
 /** Reads the non-sensitive "signed_in" hint cookie set alongside the session. */
@@ -68,7 +68,7 @@ export function Header({ logo }: { logo: ReactNode }) {
               </Link>
             ))}
           <Link
-            href="/signup"
+            href={routes.signup}
             className="btn btn--primary btn--sm"
             data-track="cta_click"
             data-track-label="header_get_started"
@@ -101,7 +101,7 @@ export function Header({ logo }: { logo: ReactNode }) {
                 {signedIn ? "Dashboard" : "Login"}
               </Link>
             )}
-            <Link href="/signup" className="btn btn--primary btn--lg" data-track="cta_click" data-track-label="mobile_get_started">
+            <Link href={routes.signup} className="btn btn--primary btn--lg" data-track="cta_click" data-track-label="mobile_get_started">
               Get Started
             </Link>
           </div>

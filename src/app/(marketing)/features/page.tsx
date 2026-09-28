@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { routes } from "@/config/site";
 import { getContent } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 import { FeaturesSection, FinalCta, PageHero, SecuritySection } from "@/components/marketing/Sections";
@@ -21,7 +22,7 @@ export default async function FeaturesPage() {
         lede="Explore the tools that help your team automate routine work, stay aligned and make better decisions."
       >
         <div className="btn-row mt-8" style={{ justifyContent: "center" }}>
-          <Link href="/signup" className="btn btn--primary btn--lg" data-track="cta_click" data-track-label="features_hero">
+          <Link href={routes.signup} className="btn btn--primary btn--lg" data-track="cta_click" data-track-label="features_hero">
             Get Started <Icon name="arrowRight" size={18} />
           </Link>
           <Link href="/pricing" className="btn btn--secondary btn--lg">

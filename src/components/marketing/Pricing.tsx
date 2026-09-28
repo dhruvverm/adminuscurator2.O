@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { routes } from "@/config/site";
 import type { BillingInterval, Plan } from "@/content/types";
 import { Icon } from "@/components/ui/Icon";
 
@@ -53,7 +54,7 @@ export function PricingCards({
           const href =
             plan.kind === "sales"
               ? `/contact?subject=sales&plan=${encodeURIComponent(plan.id)}`
-              : `/checkout?plan=${encodeURIComponent(plan.id)}&interval=${interval}`;
+              : routes.checkout(plan.id, interval);
           return (
             <article
               key={plan.id}

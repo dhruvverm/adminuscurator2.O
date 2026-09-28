@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
 import { legalPages, resourcePages } from "@/content/pages";
 
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   const main = ["", "/features", "/solutions", "/pricing", "/about", "/faq", "/contact", "/signup"];

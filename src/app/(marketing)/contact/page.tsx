@@ -7,12 +7,10 @@ export const metadata = pageMetadata({
   path: "/contact",
 });
 
-export default async function ContactPage({ searchParams }: { searchParams: Promise<{ subject?: string }> }) {
-  const { subject } = await searchParams;
-  const defaultSubject = subject === "sales" ? "Sales inquiry" : subject === "demo" ? "Product demo" : "";
+export default function ContactPage() {
   return (
     <div style={{ paddingTop: 24 }}>
-      <ContactSection headingAs="h1" defaultSubject={defaultSubject} />
+      <ContactSection headingAs="h1" />
     </div>
   );
 }

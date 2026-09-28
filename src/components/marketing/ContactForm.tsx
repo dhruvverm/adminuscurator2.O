@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { submitContact } from "@/app/actions/contact";
+import { isStaticSite, siteConfig } from "@/config/site";
 import { FormAlert, SelectField, SubmitButton, TextArea, TextField, useFormValidation } from "@/components/forms/Field";
 import { track } from "@/lib/analytics";
 import { checkEmail, checkPhone, checkRequired, collect, type FormState } from "@/lib/validation";
@@ -26,8 +28,39 @@ const validate = (d: FormData) =>
     message: checkRequired(String(d.get("message") ?? "").trim(), "Message", 10),
   });
 
-export function ContactForm({ defaultSubject = "" }: { defaultSubject?: string }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(submitContact, { ok: false });
+const FORM_ENDPOINT = process.env.NEXT_PUBLIC_FORM_ENDPOINT || "";
+
+/**
+ * Static-site submission (no server): posts to a form service such as
+ * Formspree when NEXT_PUBLIC_FORM_ENDPOINT is set, otherwise opens the
+ * visitor's email app with the message pre-filled.
+ */
+async function submitStatic(_prev: FormState, form: FormData): Promise<FormState> {
+  if (form.get("website")) return { ok: true, message: "Thanks! Your message has been sent." };
+  if (FORM_ENDPOINT) {
+    try {
+      const res = await fetch(FORM_ENDPOINT, { method: "POST", body: form, headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error(String(res.status));
+      return { ok: true, message: "Thanks! Your message has been sent. We'll get back to you within one business day." };
+    } catch {
+      return { ok: false, message: `Sorry, the message couldn't be sent. Please email us at ${siteConfig.contact.email}.` };
+    }
+  }
+  const get = (k: string) => String(form.get(k) ?? "").trim();
+  const body = `${get("message")}\n\n— ${get("name")}\n${get("company")}\n${get("email")}${get("phone") ? `\n${get("phone")}` : ""}`;
+  window.location.href = `mailto:${siteConfig.contact.email}?subject=${encodeURIComponent(get("subject"))}&body=${encodeURIComponent(body)}`;
+  return { ok: true, message: `Your email app should now open with your message. If it doesn't, email us at ${siteConfig.contact.email}.` };
+}
+
+const SUBJECT_PARAMS: Record<string, string> = { sales: "Sales inquiry", demo: "Product demo", support: "Customer support" };
+
+export function ContactForm() {
+  const [state, action, pending] = useActionState<FormState, FormData>(isStaticSite ? submitStatic : submitContact, { ok: false });
+  // Pre-select the subject from ?subject=… on the client, so the page stays static.
+  const [defaultSubject, setDefaultSubject] = useState("");
+  useEffect(() => {
+    setDefaultSubject(SUBJECT_PARAMS[new URLSearchParams(window.location.search).get("subject") ?? ""] ?? "");
+  }, []);
   const { errors, formProps } = useFormValidation(validate);
   const formRef = useRef<HTMLFormElement>(null);
   const all = { ...state.errors, ...errors };
@@ -64,7 +97,7 @@ export function ContactForm({ defaultSubject = "" }: { defaultSubject?: string }
       <TextArea name="message" label="Message" placeholder="Tell us a little about what you need…" rows={5} defaultValue={v.message} error={all.message} />
       <SubmitButton pending={pending}>Send Message</SubmitButton>
       <p className="field-hint center">
-        By submitting this form you agree to our <a className="link" href="/legal/privacy">Privacy Policy</a>.
+        By submitting this form you agree to our <Link className="link" href="/legal/privacy">Privacy Policy</Link>.
       </p>
     </form>
   );

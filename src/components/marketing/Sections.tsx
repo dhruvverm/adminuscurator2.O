@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { siteConfig } from "@/config/site";
+import { routes, siteConfig } from "@/config/site";
 import {
   benefits,
   finalCta,
@@ -255,7 +255,7 @@ export function HowItWorks() {
           ))}
         </ol>
         <div className="center mt-12 reveal">
-          <Link href="/signup" className="btn btn--primary btn--lg" data-track="cta_click" data-track-label="how_it_works">
+          <Link href={routes.signup} className="btn btn--primary btn--lg" data-track="cta_click" data-track-label="how_it_works">
             Create your account <Icon name="arrowRight" size={18} />
           </Link>
         </div>

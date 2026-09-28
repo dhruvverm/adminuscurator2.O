@@ -2,7 +2,7 @@ import { ContactForm } from "./ContactForm";
 import { ContactInfo, SectionHead } from "./Sections";
 import { PlaceholderTag } from "@/components/ui/PlaceholderTag";
 
-export function ContactSection({ headingAs = "h2", defaultSubject }: { headingAs?: "h1" | "h2"; defaultSubject?: string }) {
+export function ContactSection({ headingAs = "h2" }: { headingAs?: "h1" | "h2" }) {
   return (
     <section className="section section--soft" id="contact" aria-labelledby="contact-title">
       <div className="container contact-layout">
@@ -20,7 +20,7 @@ export function ContactSection({ headingAs = "h2", defaultSubject }: { headingAs
           <ContactInfo />
         </div>
         <div className="card contact-card reveal">
-          <ContactForm defaultSubject={defaultSubject} />
+          <ContactForm />
         </div>
       </div>
     </section>

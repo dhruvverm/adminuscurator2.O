@@ -4,6 +4,7 @@
  * are placeholders that must be replaced with real information.
  */
 import type { IconName } from "@/components/ui/Icon";
+import { routes } from "@/config/site";
 
 export const hero = {
   badge: "Powerful Software. Built for Modern Businesses.",
@@ -12,7 +13,7 @@ export const hero = {
   highlight: "Smarter, Faster,",
   subheadline:
     "Streamline your workflow, automate repetitive tasks, and manage your business with powerful software designed to help your team achieve more.",
-  primaryCta: { label: "Get Started", href: "/signup" },
+  primaryCta: { label: "Get Started", href: routes.signup },
   secondaryCta: { label: "Explore Features", href: "#features" },
   trust: ["No complicated setup", "Easy to use", "Built for modern teams"],
 };
@@ -201,7 +202,7 @@ export const useCases: { icon: IconName; title: string; description: string; poi
 export const finalCta = {
   headline: "Ready to Work Smarter?",
   text: "Start using powerful software designed to simplify your workflow and help your business grow.",
-  primary: { label: "Get Started", href: "/signup" },
+  primary: { label: "Get Started", href: routes.signup },
   secondary: { label: "Talk to Sales", href: "/contact?subject=sales" },
 };
 

@@ -6,6 +6,14 @@
  *  replaced with your real business information before launch.
  */
 
+/**
+ * Static mode: set NEXT_PUBLIC_STATIC_EXPORT=true to build a server-less
+ * version (e.g. for GitHub Pages). Accounts, checkout and admin need a
+ * server, so in static mode sign-up/checkout buttons lead to the contact
+ * form instead.
+ */
+export const isStaticSite = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
+
 export const siteConfig = {
   /** Company / product name used across the site, SEO and emails. */
   name: "YourBrand",
@@ -51,7 +59,7 @@ export const siteConfig = {
   ] as { name: string; icon: "x" | "linkedin" | "github" | "youtube"; href: string }[],
 
   /** Whether the product has user accounts (shows Login in the header). */
-  hasAccounts: true,
+  hasAccounts: !isStaticSite,
 
   /**
    * When true, placeholder values (stats, prices, sample testimonials…)
@@ -78,6 +86,15 @@ export const siteConfig = {
 };
 
 export type SiteConfig = typeof siteConfig;
+
+/** Where sign-up and purchase buttons lead (contact form on a static site). */
+export const routes = {
+  signup: isStaticSite ? "/contact?subject=demo" : "/signup",
+  checkout: (planId: string, interval: string) =>
+    isStaticSite
+      ? `/contact?subject=sales&plan=${encodeURIComponent(planId)}`
+      : `/checkout?plan=${encodeURIComponent(planId)}&interval=${interval}`,
+};
 
 /** Main navigation (header). */
 export const mainNav = [
