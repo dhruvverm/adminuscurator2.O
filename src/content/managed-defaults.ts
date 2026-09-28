@@ -212,7 +212,7 @@ export const defaultFaqs: Faq[] = [
 export const defaultProducts: Product[] = [
   {
     id: "platform",
-    name: "YourBrand Platform",
+    name: "Adminuscurator Platform",
     summary: "The core workspace: dashboards, automation, analytics and collaboration. [Replace with your product.]",
     status: "active",
   },

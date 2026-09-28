@@ -31,6 +31,7 @@ npm run dev                  # http://localhost:3000
 
 | What | Where |
 | --- | --- |
+| Logo files (full, white, mark-only SVG) | `public/brand/`. The favicon is `src/app/icon.svg` and the app icon is `src/app/apple-icon.tsx` |
 | Company name, logo, **brand colors**, contact details, social links, SEO defaults | `src/config/site.ts` |
 | Header & footer navigation | `src/config/site.ts` (`mainNav`, `footerNav`) |
 | Hero, stats, problems, product tour, steps, benefits, security, use cases, final CTA, About page | `src/content/marketing.ts` |

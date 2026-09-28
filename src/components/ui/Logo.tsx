@@ -10,9 +10,22 @@ export function LogoMark({ className = "logo__mark" }: { className?: string }) {
   return (
     <span className={`${className} logo__mark--default`} aria-hidden="true">
       <svg viewBox="0 0 32 32">
-        <path d="M9 20.5 14 11l4 7 2.5-4L24 20.5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="20.5" cy="14" r="1.6" fill="#fff" />
+        {/* "A" whose crossbar is a single curated dot */}
+        <path d="M9.5 23.5 16 8.5l6.5 15" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="16" cy="18.3" r="2.1" fill="#fff" />
       </svg>
+    </span>
+  );
+}
+
+/** Brand name with the accent part (e.g. "curator") in the brand color. */
+export function Wordmark() {
+  const { name, logo } = siteConfig;
+  if (!logo.accent || !name.endsWith(logo.accent) || name === logo.accent) return <span>{name}</span>;
+  return (
+    <span>
+      {name.slice(0, -logo.accent.length)}
+      <span className="logo__accent">{logo.accent}</span>
     </span>
   );
 }
@@ -21,7 +34,7 @@ export function Logo({ href = "/" }: { href?: string }) {
   return (
     <Link href={href} className="logo" aria-label={`${siteConfig.name} — home`}>
       <LogoMark />
-      <span>{siteConfig.name}</span>
+      <Wordmark />
     </Link>
   );
 }

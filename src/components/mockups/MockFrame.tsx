@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { siteConfig } from "@/config/site";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { LogoMark } from "@/components/ui/Logo";
+import { LogoMark, Wordmark } from "@/components/ui/Logo";
 
 const navItems: { key: string; label: string; icon: IconName; count?: number }[] = [
   { key: "dashboard", label: "Dashboard", icon: "dashboard" },
@@ -31,7 +31,7 @@ export function MockFrame({ active, title, actions, children }: { active: string
         <aside className="mock__side">
           <div className="mock__brand">
             <LogoMark />
-            {siteConfig.name}
+            <Wordmark />
           </div>
           <div className="mock__nav-label">Workspace</div>
           {navItems.map((n) => (

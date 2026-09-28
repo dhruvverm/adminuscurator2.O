@@ -112,7 +112,7 @@ export const resourcePages: SimplePage[] = [
   {
     slug: "integrations",
     title: "Integrations",
-    description: "Connect YourBrand with the tools your team already uses.",
+    description: "Connect Adminuscurator with the tools your team already uses.",
     sections: [{ heading: "Coming soon", body: ["[List your supported integrations here.]"] }],
   },
   {

@@ -16,12 +16,12 @@ export const isStaticSite = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
 
 export const siteConfig = {
   /** Company / product name used across the site, SEO and emails. */
-  name: "YourBrand",
+  name: "Adminuscurator",
   /** Legal entity name, used in the footer and legal pages. */
   legalName: "[Company Legal Name]",
   tagline: "Powerful Software for Modern Businesses",
   description:
-    "Discover YourBrand, powerful software designed to simplify workflows, automate tasks, and help businesses work smarter.",
+    "Discover Adminuscurator, powerful software designed to simplify workflows, automate tasks, and help businesses work smarter.",
 
   /** Public URL — set NEXT_PUBLIC_SITE_URL in the environment. */
   url: (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, ""),
@@ -30,7 +30,12 @@ export const siteConfig = {
    * Logo. Leave `src` empty to use the built-in logo mark,
    * or point it at a file in /public (e.g. "/logo.svg").
    */
-  logo: { src: "", alt: "YourBrand logo" },
+  logo: {
+    src: "",
+    alt: "Adminuscurator logo",
+    /** Trailing part of the name shown in the brand color in the wordmark. */
+    accent: "curator",
+  },
 
   /** Brand colors. These become CSS variables used by every component. */
   theme: {
@@ -69,8 +74,8 @@ export const siteConfig = {
   showPlaceholderTags: true,
 
   seo: {
-    titleTemplate: "%s — YourBrand",
-    defaultTitle: "YourBrand — Powerful Software for Modern Businesses",
+    titleTemplate: "%s — Adminuscurator",
+    defaultTitle: "Adminuscurator — Powerful Software for Modern Businesses",
     twitterHandle: "", // e.g. "@yourbrand"
     locale: "en_US",
   },
