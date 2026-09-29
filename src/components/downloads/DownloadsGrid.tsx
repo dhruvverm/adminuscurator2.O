@@ -60,6 +60,12 @@ export function DownloadsGrid({ software, showPlaceholderTags }: { software: Sof
                     <time dateTime={sw.releaseDate}>{released}</time>
                   </li>
                 )}
+                {sw.license && (
+                  <li className="sw-card__license">
+                    <Icon name="shield" size={14} />
+                    {sw.license}
+                  </li>
+                )}
               </ul>
 
               <ul className="sw-card__platforms" aria-label="Available for">

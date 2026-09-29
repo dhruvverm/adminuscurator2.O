@@ -74,6 +74,8 @@ export interface Software {
   tabletUrl?: string;
   windowsUrl?: string;
   macUrl?: string;
+  /** Usage rights shown to visitors, e.g. "Free to download and use". */
+  license?: string;
   /** Keep true for sample entries — they are labelled on the site. */
   isPlaceholder: boolean;
 }

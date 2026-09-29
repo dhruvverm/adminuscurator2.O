@@ -2962,7 +2962,8 @@ ol.checkout-steps {
 .downloads-grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 380px));
+  justify-content: center;
 }
 .sw-card {
   display: flex;
@@ -3321,4 +3322,15 @@ ol.checkout-steps {
   .device-card[aria-pressed="true"] .device-card__hint {
     margin-right: 28px;
   }
+}
+.sw-card__meta .sw-card__license {
+  color: var(--success);
+  font-weight: 600;
+}
+.dl-meta__wide {
+  grid-column: 1 / -1;
+}
+.install-tip {
+  margin: 0 0 16px;
+  font-size: 0.875rem;
 }

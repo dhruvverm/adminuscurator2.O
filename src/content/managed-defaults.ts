@@ -219,61 +219,29 @@ export const defaultProducts: Product[] = [
 ];
 
 /**
- * SAMPLE software entries. Replace names, descriptions and versions with
- * your real apps, and point the URLs at your real installers / store pages
- * (App Store, Google Play, Microsoft Store, .exe, .dmg…). The sample links
- * point to a placeholder file in /public/files so nothing is broken.
+ * Downloadable apps (Downloads page). Put installer files in /public/files
+ * and link them as "/files/…", or use store URLs. Leave a platform's URL
+ * empty when it isn't available — that option is then disabled.
  */
-const SAMPLE_FILE = "/files/sample-installer.txt";
 export const defaultSoftware: Software[] = [
   {
-    id: "desktop",
-    name: "Adminuscurator Desktop",
-    description: "The full workspace on your computer, with offline access and native notifications.",
-    icon: "laptop",
-    version: "1.0.0",
-    fileSize: "[XX MB]",
-    releaseDate: "2026-09-01",
-    windowsUrl: SAMPLE_FILE,
-    macUrl: SAMPLE_FILE,
-    isPlaceholder: true,
-  },
-  {
-    id: "mobile",
-    name: "Adminuscurator Mobile",
-    description: "Check dashboards, approve tasks and get alerts on the go.",
-    icon: "smartphone",
-    version: "1.0.0",
-    fileSize: "[XX MB]",
-    releaseDate: "2026-09-01",
-    mobileUrl: SAMPLE_FILE,
-    tabletUrl: SAMPLE_FILE,
-    isPlaceholder: true,
-  },
-  {
-    id: "sync",
-    name: "Curator Sync",
-    description: "Keep files and data in sync between your devices and your workspace.",
-    icon: "refresh",
-    version: "0.9.0",
-    fileSize: "[XX MB]",
-    releaseDate: "2026-08-15",
-    mobileUrl: SAMPLE_FILE,
-    tabletUrl: SAMPLE_FILE,
-    windowsUrl: SAMPLE_FILE,
-    macUrl: SAMPLE_FILE,
-    isPlaceholder: true,
-  },
-  {
-    id: "admin-toolkit",
-    name: "Admin Toolkit",
-    description: "Utilities for administrators to manage users, roles and exports in bulk.",
-    icon: "settings",
-    version: "1.2.0",
-    fileSize: "[XX MB]",
-    releaseDate: "2026-07-20",
-    windowsUrl: SAMPLE_FILE,
-    isPlaceholder: true,
+    id: "optical-shop-manager",
+    name: "Optical Shop Manager",
+    description:
+      "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. No internet or account needed, and your data stays on your device.",
+    logo: "/brand/apps/optical-shop.svg",
+    icon: "store",
+    version: "1.25.0",
+    fileSize: "177 KB (Android) · 594 KB (Windows/macOS)",
+    releaseDate: "2026-09-18",
+    // Android app (APK) for phones and tablets
+    mobileUrl: "/files/OpticalShopManager-1.25.0.apk",
+    tabletUrl: "/files/OpticalShopManager-1.25.0.apk",
+    // Single-file offline version that runs in Chrome, Edge or Safari
+    windowsUrl: "/files/OpticalShopManager-1.25.0.html",
+    macUrl: "/files/OpticalShopManager-1.25.0.html",
+    license: "Free to download and use",
+    isPlaceholder: false,
   },
 ];
 

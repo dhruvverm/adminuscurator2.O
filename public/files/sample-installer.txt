@@ -1,5 +1,0 @@
-This is a placeholder download from the Adminuscurator website.
-
-Replace it with your real installer, or point the download URLs for each app
-at your real files or store pages (App Store, Google Play, Microsoft Store…)
-in /admin → Downloads or src/content/managed-defaults.ts.

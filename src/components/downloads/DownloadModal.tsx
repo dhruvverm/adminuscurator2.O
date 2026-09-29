@@ -11,12 +11,43 @@ import { DESKTOP_OS, DEVICES, availableOs, downloadUrl, formatDate, isDeviceAvai
 type Step = "device" | "confirm";
 
 /** Best guess at the visitor's current device, used only as a hint. */
-function detectDevice(): { device: Device; os: DesktopOs | null } {
+type Detected = { device: Device; os: DesktopOs | null; appleMobile: boolean };
+
+function detectDevice(): Detected {
   const ua = navigator.userAgent;
   const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
-  if (/iPad|Tablet/.test(ua) || iPadOS || (/Android/.test(ua) && !/Mobile/.test(ua))) return { device: "tablet", os: null };
-  if (/iPhone|iPod|Android.*Mobile|Mobile/.test(ua)) return { device: "mobile", os: null };
-  return { device: "desktop", os: /Mac/.test(ua) ? "mac" : /Win/.test(ua) ? "windows" : null };
+  const appleMobile = /iPhone|iPad|iPod/.test(ua) || iPadOS;
+  if (/iPad|Tablet/.test(ua) || iPadOS || (/Android/.test(ua) && !/Mobile/.test(ua))) return { device: "tablet", os: null, appleMobile };
+  if (/iPhone|iPod|Android.*Mobile|Mobile/.test(ua)) return { device: "mobile", os: null, appleMobile };
+  return { device: "desktop", os: /Mac/.test(ua) ? "mac" : /Win/.test(ua) ? "windows" : null, appleMobile };
+}
+
+/** Short install help based on the file type being downloaded. */
+function InstallTip({ url, isAppleMobile }: { url: string | null; isAppleMobile: boolean }) {
+  if (!url) return null;
+  const path = url.split(/[?#]/)[0].toLowerCase();
+  if (path.endsWith(".apk")) {
+    return isAppleMobile ? (
+      <p className="alert alert--warning install-tip">
+        <Icon name="helpCircle" size={18} />
+        <span>This is an Android app and can&apos;t be installed on iPhone or iPad. Choose <strong>Laptop / Desktop</strong> instead to get the browser version, which also opens in Safari.</span>
+      </p>
+    ) : (
+      <p className="alert alert--info install-tip">
+        <Icon name="helpCircle" size={18} />
+        <span>Android app (APK). After downloading, open the file to install it. If Android asks, allow installing apps from your browser.</span>
+      </p>
+    );
+  }
+  if (path.endsWith(".html")) {
+    return (
+      <p className="alert alert--info install-tip">
+        <Icon name="helpCircle" size={18} />
+        <span>Runs in your browser: open the downloaded file in Chrome, Edge or Safari. It works offline, and your data stays on this computer.</span>
+      </p>
+    );
+  }
+  return null;
 }
 
 /**
@@ -30,7 +61,7 @@ export function DownloadModal({ software, onClose }: { software: Software | null
   const [device, setDevice] = useState<Device | null>(null);
   const [os, setOs] = useState<DesktopOs | null>(null);
   const [started, setStarted] = useState(false);
-  const [detected, setDetected] = useState<{ device: Device; os: DesktopOs | null } | null>(null);
+  const [detected, setDetected] = useState<Detected | null>(null);
   const [closing, setClosing] = useState(false);
 
   // Open/reset whenever a new app is chosen.
@@ -213,7 +244,15 @@ export function DownloadModal({ software, onClose }: { software: Software | null
                     <dd>{released}</dd>
                   </div>
                 )}
+                {sw.license && (
+                  <div className="dl-meta__wide">
+                    <dt>License</dt>
+                    <dd>{sw.license}</dd>
+                  </div>
+                )}
               </dl>
+
+              <InstallTip url={url} isAppleMobile={!!detected?.appleMobile} />
 
               {url ? (
                 <a

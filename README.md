@@ -65,7 +65,14 @@ Pressing **Download** never starts a download straight away:
 
 Each app has a name, description, logo URL (or an icon), version, file size, release date, and Mobile / Tablet / Windows / macOS download URLs. **Leave a URL empty when that platform isn't available.** The option is then shown as "Not available" and can't be selected, so visitors never see a broken link. You can put installer files in `public/files/` and link them as `/files/your-app.dmg`.
 
-The four apps included are samples marked with a *Sample* tag. Their links point to `public/files/sample-installer.txt`. Replace them with your real software.
+**Currently listed: Optical Shop Manager 1.25.0**, free to download and use.
+* Mobile and Tablet link to the signed Android app (`public/files/OpticalShopManager-1.25.0.apk`).
+* Windows and macOS link to the single-file offline version (`public/files/OpticalShopManager-1.25.0.html`), which runs in Chrome, Edge or Safari.
+* The dialog shows install help automatically: for an APK it covers Android's "install unknown apps" prompt, for the `.html` it explains how to open it, and iPhone/iPad visitors are pointed to the browser version.
+
+**Releasing a new version:** build it in the optical-shop project, copy the new `.apk` and `.html` into `public/files/` with the new version in the file names, update `version`, `fileSize`, `releaseDate` and the four URLs in `defaultSoftware`, then push.
+
+Each app can have a **License** line (e.g. "Free to download and use"). It appears on the card and in the download dialog.
 
 Every **Download Now** click is tracked as a `download` analytics event.
 

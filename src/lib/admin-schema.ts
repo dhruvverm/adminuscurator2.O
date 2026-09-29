@@ -133,6 +133,7 @@ export const collections: Record<keyof ManagedContent, CollectionDef> = {
       { key: "tabletUrl", label: "Tablet download URL", type: "text", hint: "Empty = unavailable", max: 500 },
       { key: "windowsUrl", label: "Windows download URL", type: "text", hint: "Empty = unavailable", max: 500 },
       { key: "macUrl", label: "macOS download URL", type: "text", hint: "Empty = unavailable", max: 500 },
+      { key: "license", label: "License / usage rights", type: "text", hint: "e.g. Free to download and use", max: 120 },
       { key: "isPlaceholder", label: "Sample / placeholder (labelled on site)", type: "boolean" },
     ],
     blank: () => ({
@@ -148,6 +149,7 @@ export const collections: Record<keyof ManagedContent, CollectionDef> = {
       tabletUrl: "",
       windowsUrl: "",
       macUrl: "",
+      license: "Free to download and use",
       isPlaceholder: false,
     }),
   },
