@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Software } from "@/content/types";
 import { Icon } from "@/components/ui/Icon";
 import { track } from "@/lib/analytics";
-import { isExternalUrl, withBasePath } from "@/lib/urls";
+import { isDirectFile, isExternalUrl, withBasePath } from "@/lib/urls";
 import { SoftwareLogo } from "./SoftwareLogo";
-import { DESKTOP_OS, DEVICES, availableOs, downloadUrl, formatDate, isDeviceAvailable, type DesktopOs, type Device } from "./platforms";
+import { DESKTOP_OS, DEVICES, availableOs, downloadUrl, formatDate, isDeviceAvailable, platformSize, type DesktopOs, type Device } from "./platforms";
 
 type Step = "device" | "confirm";
 
@@ -26,26 +26,35 @@ function detectDevice(): Detected {
 function InstallTip({ url, isAppleMobile }: { url: string | null; isAppleMobile: boolean }) {
   if (!url) return null;
   const path = url.split(/[?#]/)[0].toLowerCase();
+  const tip = (tone: "info" | "warning", body: React.ReactNode) => (
+    <div className={`alert alert--${tone} install-tip`}>
+      <Icon name="helpCircle" size={18} />
+      <div>{body}</div>
+    </div>
+  );
   if (path.endsWith(".apk")) {
-    return isAppleMobile ? (
-      <p className="alert alert--warning install-tip">
-        <Icon name="helpCircle" size={18} />
-        <span>This is an Android app and can&apos;t be installed on iPhone or iPad. Choose <strong>Laptop / Desktop</strong> instead to get the browser version, which also opens in Safari.</span>
-      </p>
-    ) : (
-      <p className="alert alert--info install-tip">
-        <Icon name="helpCircle" size={18} />
-        <span>Android app (APK). After downloading, open the file to install it. If Android asks, allow installing apps from your browser.</span>
-      </p>
+    return isAppleMobile
+      ? tip("warning", <>This is an Android app and can&apos;t be installed on iPhone or iPad.</>)
+      : tip("info", <>Android app (APK). After downloading, open the file to install it. If Android asks, allow installing apps from your browser.</>);
+  }
+  if (path.endsWith(".exe")) {
+    return tip(
+      "info",
+      <>
+        Windows installer. Run the downloaded file and follow the steps. If <strong>&ldquo;Windows protected your PC&rdquo;</strong> appears, click <strong>More info → Run anyway</strong>.
+      </>,
+    );
+  }
+  if (path.endsWith(".dmg")) {
+    return tip(
+      "info",
+      <>
+        Open the downloaded file and drag the app into <strong>Applications</strong>. The first time you open it, if macOS says it can&apos;t verify the developer, go to <strong>System Settings → Privacy &amp; Security → Open Anyway</strong>.
+      </>,
     );
   }
   if (path.endsWith(".html")) {
-    return (
-      <p className="alert alert--info install-tip">
-        <Icon name="helpCircle" size={18} />
-        <span>Runs in your browser: open the downloaded file in Chrome, Edge or Safari. It works offline, and your data stays on this computer.</span>
-      </p>
-    );
+    return tip("info", <>Runs in your browser: open the downloaded file in Chrome, Edge or Safari. It works offline, and your data stays on this computer.</>);
   }
   return null;
 }
@@ -113,6 +122,9 @@ export function DownloadModal({ software, onClose }: { software: Software | null
   const sw = software;
   const url = sw && device ? downloadUrl(sw, device, os ?? undefined) : null;
   const external = url ? isExternalUrl(url) : false;
+  // Store/web pages open in a new tab; installer files download in place.
+  const newTab = !!url && external && !isDirectFile(url);
+  const size = sw && device ? platformSize(sw, device, os) : undefined;
   const selected = DEVICES.find((d) => d.id === device);
   const released = formatDate(sw?.releaseDate);
   const osList = sw ? availableOs(sw) : [];
@@ -140,7 +152,6 @@ export function DownloadModal({ software, onClose }: { software: Software | null
               <h2 id="dl-title">{sw.name}</h2>
               <p className="subtle">
                 Version {sw.version}
-                {sw.fileSize ? ` · ${sw.fileSize}` : ""}
               </p>
             </div>
             <button type="button" className="icon-btn modal__close" onClick={close} aria-label="Close">
@@ -232,10 +243,10 @@ export function DownloadModal({ software, onClose }: { software: Software | null
                   <dt>Version</dt>
                   <dd>{sw.version}</dd>
                 </div>
-                {sw.fileSize && (
+                {size && (
                   <div>
                     <dt>File size</dt>
-                    <dd>{sw.fileSize}</dd>
+                    <dd>{size}</dd>
                   </div>
                 )}
                 {released && (
@@ -258,7 +269,7 @@ export function DownloadModal({ software, onClose }: { software: Software | null
                 <a
                   className="btn btn--primary btn--lg btn--block"
                   href={withBasePath(url)}
-                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : { download: "" })}
+                  {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : external ? {} : { download: "" })}
                   onClick={() => {
                     setStarted(true);
                     track("download", { label: sw.id, device: device ?? undefined, os: os ?? undefined });
@@ -274,9 +285,9 @@ export function DownloadModal({ software, onClose }: { software: Software | null
               <p className="modal__note" aria-live="polite">
                 {started ? (
                   <>
-                    <Icon name="checkCircle" size={16} /> Your download should start shortly{external ? " in a new tab" : ""}.
+                    <Icon name="checkCircle" size={16} /> Your download should start shortly{newTab ? " in a new tab" : ""}.
                   </>
-                ) : external && url ? (
+                ) : newTab && url ? (
                   <>Opens {new URL(url).hostname} in a new tab.</>
                 ) : null}
               </p>

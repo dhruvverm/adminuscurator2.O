@@ -66,11 +66,33 @@ Pressing **Download** never starts a download straight away:
 Each app has a name, description, logo URL (or an icon), version, file size, release date, and Mobile / Tablet / Windows / macOS download URLs. **Leave a URL empty when that platform isn't available.** The option is then shown as "Not available" and can't be selected, so visitors never see a broken link. You can put installer files in `public/files/` and link them as `/files/your-app.dmg`.
 
 **Currently listed: Optical Shop Manager 1.25.0**, free to download and use.
-* Mobile and Tablet link to the signed Android app (`public/files/OpticalShopManager-1.25.0.apk`).
-* Windows and macOS link to the single-file offline version (`public/files/OpticalShopManager-1.25.0.html`), which runs in Chrome, Edge or Safari.
-* The dialog shows install help automatically: for an APK it covers Android's "install unknown apps" prompt, for the `.html` it explains how to open it, and iPhone/iPad visitors are pointed to the browser version.
 
-**Releasing a new version:** build it in the optical-shop project, copy the new `.apk` and `.html` into `public/files/` with the new version in the file names, update `version`, `fileSize`, `releaseDate` and the four URLs in `defaultSoftware`, then push.
+| Device | File | Where it's hosted |
+|---|---|---|
+| Mobile / Tablet (Android) | `OpticalShopManager-1.25.0.apk` (177 KB) | `public/files/` on this site |
+| Windows 10/11 | `OpticalShopManager-Setup-1.25.0.exe` (106 MB) | [GitHub Release](https://github.com/dhruvverm/adminuscurator2.O/releases/tag/optical-shop-v1.25.0) |
+| macOS (Apple Silicon and Intel) | `OpticalShopManager-1.25.0-mac.dmg` (218 MB) | same GitHub Release |
+
+### The desktop app (`apps/optical-shop-desktop/`)
+
+An [Electron](https://www.electronjs.org/) app that wraps the offline single-file build (`app/index.html`). It adds:
+* native printing (bills and PDF);
+* a Save dialog for backups and invoice files;
+* support for the automatic backup folder;
+* WhatsApp and web links opened in the user's browser;
+* one running copy at a time.
+
+Data is stored in the app's own data folder (Help → Open data folder) and survives updates.
+
+The workflow `.github/workflows/optical-shop-desktop.yml` builds on GitHub's Windows and macOS machines. It installs and launches each app as a test, then publishes the installers and a `SHA256SUMS.txt` to the release `optical-shop-v<version>`.
+
+**Releasing a new version:**
+1. Build the optical-shop project, then run `cd apps/optical-shop-desktop && npm run sync -- /path/to/optical-shop/dist/OpticalShopManager.html`.
+2. Bump `version` in `apps/optical-shop-desktop/package.json`.
+3. Copy the new APK into `public/files/`.
+4. In `defaultSoftware`, update `version`, `releaseDate`, the sizes, the APK URLs and `RELEASE`, then push. The installers build automatically.
+
+**Code signing:** the installers aren't signed with paid certificates yet. Windows shows a SmartScreen warning ("More info → Run anyway"), and macOS asks the user to allow the app once in Privacy & Security. The download dialog explains both. To remove the warnings, add an Apple Developer ID (with notarization) and a Windows code-signing certificate as repository secrets (see [electron.build/code-signing](https://www.electron.build/code-signing)).
 
 Each app can have a **License** line (e.g. "Free to download and use"). It appears on the card and in the download dialog.
 

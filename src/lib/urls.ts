@@ -12,3 +12,8 @@ export function withBasePath(url: string) {
 export function isExternalUrl(url: string) {
   return /^https?:\/\//.test(url);
 }
+
+/** True for links to an installer/file (downloads in place) vs. a web/store page. */
+export function isDirectFile(url: string) {
+  return /\.(apk|aab|exe|msi|msix|dmg|pkg|zip|appimage|deb|rpm|html|txt|pdf)$/i.test(url.split(/[?#]/)[0]);
+}

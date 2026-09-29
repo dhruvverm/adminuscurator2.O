@@ -26,6 +26,13 @@ export function downloadUrl(sw: Software, device: Device, os?: DesktopOs): strin
   return clean(sw.windowsUrl) ?? clean(sw.macUrl);
 }
 
+/** Size of the file for the chosen platform, falling back to the general size. */
+export function platformSize(sw: Software, device: Device, os?: DesktopOs | null): string | undefined {
+  const specific =
+    device === "mobile" ? sw.mobileSize : device === "tablet" ? sw.tabletSize : os === "mac" ? sw.macSize : os === "windows" ? sw.windowsSize : undefined;
+  return specific || sw.fileSize;
+}
+
 export function availableOs(sw: Software): DesktopOs[] {
   return DESKTOP_OS.filter((o) => downloadUrl(sw, "desktop", o.id)).map((o) => o.id);
 }

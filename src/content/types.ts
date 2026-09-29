@@ -74,6 +74,11 @@ export interface Software {
   tabletUrl?: string;
   windowsUrl?: string;
   macUrl?: string;
+  /** Per-platform download sizes shown in the download dialog (fall back to fileSize). */
+  mobileSize?: string;
+  tabletSize?: string;
+  windowsSize?: string;
+  macSize?: string;
   /** Usage rights shown to visitors, e.g. "Free to download and use". */
   license?: string;
   /** Keep true for sample entries — they are labelled on the site. */

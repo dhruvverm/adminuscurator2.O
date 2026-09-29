@@ -223,23 +223,29 @@ export const defaultProducts: Product[] = [
  * and link them as "/files/…", or use store URLs. Leave a platform's URL
  * empty when it isn't available — that option is then disabled.
  */
+const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/optical-shop-v1.25.0";
+
 export const defaultSoftware: Software[] = [
   {
     id: "optical-shop-manager",
     name: "Optical Shop Manager",
     description:
-      "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. No internet or account needed, and your data stays on your device.",
+      "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. Installs as an app on Android, Windows and Mac; no internet or account needed, and your data stays on your device.",
     logo: "/brand/apps/optical-shop.svg",
     icon: "store",
     version: "1.25.0",
-    fileSize: "177 KB (Android) · 594 KB (Windows/macOS)",
     releaseDate: "2026-09-18",
-    // Android app (APK) for phones and tablets
+    // Android app (APK) for phones and tablets — served from this site
     mobileUrl: "/files/OpticalShopManager-1.25.0.apk",
+    mobileSize: "177 KB",
     tabletUrl: "/files/OpticalShopManager-1.25.0.apk",
-    // Single-file offline version that runs in Chrome, Edge or Safari
-    windowsUrl: "/files/OpticalShopManager-1.25.0.html",
-    macUrl: "/files/OpticalShopManager-1.25.0.html",
+    tabletSize: "177 KB",
+    // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
+    // and hosted on the GitHub Release (too large for the website itself)
+    windowsUrl: `${RELEASE}/OpticalShopManager-Setup-1.25.0.exe`,
+    windowsSize: "106 MB",
+    macUrl: `${RELEASE}/OpticalShopManager-1.25.0-mac.dmg`,
+    macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
   },
