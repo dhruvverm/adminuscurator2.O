@@ -9,3 +9,6 @@ next-env.d.ts
 # Local JSON data store (contains users, orders and messages)
 data/*.json
 .DS_Store
+# Desktop app builds
+apps/*/node_modules
+apps/*/dist

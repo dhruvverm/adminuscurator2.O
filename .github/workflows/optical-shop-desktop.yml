@@ -1,0 +1,92 @@
+# Builds the Optical Shop Manager desktop app (Windows installer + macOS dmg)
+# on native GitHub runners and publishes them as a GitHub Release:
+#   tag  optical-shop-v<version from apps/optical-shop-desktop/package.json>
+# Runs when the desktop app changes on main, or manually from the Actions tab.
+name: Optical Shop desktop release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/optical-shop-desktop/**"
+      - ".github/workflows/optical-shop-desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: optical-shop-desktop
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: --mac
+          - os: windows-latest
+            target: --win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/optical-shop-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/optical-shop-desktop/package-lock.json
+      - run: npm ci
+      - name: Smoke test (app launches, storage works)
+        run: npx electron .
+        env:
+          SMOKE_TEST: "1"
+      - name: Build installer
+        run: npx electron-builder ${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            apps/optical-shop-desktop/dist/*.dmg
+            apps/optical-shop-desktop/dist/*.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(node -p "require('./apps/optical-shop-desktop/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Checksums
+        run: cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt && ls -la
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: optical-shop-v${{ steps.v.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Optical Shop Manager ${{ steps.v.outputs.version }}
+          fail_on_unmatched_files: true
+          files: out/*
+          body: |
+            Desktop version of **Optical Shop Manager** — offline management and accounting for optical shops.
+
+            | Platform | File |
+            |---|---|
+            | Windows 10/11 (64-bit) | `OpticalShopManager-Setup-${{ steps.v.outputs.version }}.exe` |
+            | macOS (Apple silicon & Intel) | `OpticalShopManager-${{ steps.v.outputs.version }}-mac.dmg` |
+
+            The app is not yet code-signed with a paid certificate, so:
+            * **Windows:** if "Windows protected your PC" appears, click **More info → Run anyway**.
+            * **macOS:** open the dmg and drag the app to Applications. On first launch, if macOS says it can't verify the developer, go to **System Settings → Privacy & Security → Open Anyway**.
+
+            Free to download and use. Your data stays on your computer — take regular backups from *Backup & Restore*.
