@@ -41,6 +41,8 @@ jobs:
           cache: npm
           cache-dependency-path: apps/optical-shop-desktop/package-lock.json
       - run: npm ci
+      - name: Licence rules self-test
+        run: npm run test-license
       - name: Smoke test (app launches, storage works)
         run: npx electron .
         env:

@@ -12,7 +12,9 @@
     "smoke": "SMOKE_TEST=1 electron .",
     "sync": "node scripts/sync-app.mjs",
     "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win",
+    "gen-code": "node scripts/gen-code.mjs",
+    "test-license": "node scripts/test-license.mjs"
   },
   "build": {
     "appId": "com.opticalshop.manager.desktop",
@@ -25,7 +27,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "app/**/*"
+      "app/**/*",
+      "license/**/*"
     ],
     "mac": {
       "category": "public.app-category.business",

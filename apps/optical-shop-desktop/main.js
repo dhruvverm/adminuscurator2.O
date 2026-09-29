@@ -5,14 +5,24 @@
  * localStorage) is kept in the app's own user-data folder and persists
  * across updates.
  */
-const { app, BrowserWindow, Menu, dialog, shell, session } = require("electron");
+const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain } = require("electron");
 const path = require("node:path");
+const license = require("./license/manager");
 
 const APP_NAME = "Optical Shop Manager";
 const INDEX = path.join(__dirname, "app", "index.html");
+const GATE = path.join(__dirname, "license", "gate.html");
 const SMOKE = process.env.SMOKE_TEST === "1";
 
 app.setName(APP_NAME);
+license.setPath(app.getPath("userData"));
+
+// The activation screen talks to the licence check here in the main process.
+ipcMain.handle("license:status", () => license.status());
+ipcMain.handle("license:activate", (_e, code) => license.activate(code));
+ipcMain.handle("license:open", () => {
+  if (license.status().state === "active" && win) win.loadFile(INDEX);
+});
 
 // One running copy only — two windows writing the same database could conflict.
 if (!SMOKE && !app.requestSingleInstanceLock()) {
@@ -64,7 +74,21 @@ function createWindow() {
     }
   });
 
-  win.loadFile(INDEX);
+  // Show the app only while the licence is active; otherwise the activation screen.
+  // (The smoke test bypasses the gate so it can check the app itself.)
+  const unlocked = SMOKE || license.status().state === "active";
+  win.loadFile(unlocked ? INDEX : GATE);
+
+  // While the app is open, lock it the moment the 7 days run out.
+  if (!SMOKE) {
+    const timer = setInterval(() => {
+      if (!win || win.isDestroyed()) return;
+      const onApp = win.webContents.getURL().includes("/app/");
+      if (onApp && license.status().state !== "active") win.loadFile(GATE);
+    }, 60 * 1000);
+    win.on("closed", () => clearInterval(timer));
+  }
+
   return win;
 }
 

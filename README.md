@@ -76,6 +76,7 @@ Each app has a name, description, logo URL (or an icon), version, file size, rel
 ### The desktop app (`apps/optical-shop-desktop/`)
 
 An [Electron](https://www.electronjs.org/) app that wraps the offline single-file build (`app/index.html`). It adds:
+* an **activation screen**: a valid code unlocks the app for **7 days**, then it locks and asks for a new one (the shop's data is kept safe). Generate codes with `cd apps/optical-shop-desktop && npm run gen-code`. See that folder's README for how the offline check works and its limits;
 * native printing (bills and PDF);
 * a Save dialog for backups and invoice files;
 * support for the automatic backup folder;
