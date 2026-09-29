@@ -3,7 +3,7 @@
  * Once an admin saves changes, the saved version (in the data store)
  * takes precedence over these defaults.
  */
-import type { Faq, Feature, ManagedContent, Plan, Product, Testimonial } from "./types";
+import type { Faq, Feature, ManagedContent, Plan, Product, Software, Testimonial } from "./types";
 
 export const defaultFeatures: Feature[] = [
   {
@@ -218,10 +218,70 @@ export const defaultProducts: Product[] = [
   },
 ];
 
+/**
+ * SAMPLE software entries. Replace names, descriptions and versions with
+ * your real apps, and point the URLs at your real installers / store pages
+ * (App Store, Google Play, Microsoft Store, .exe, .dmg…). The sample links
+ * point to a placeholder file in /public/files so nothing is broken.
+ */
+const SAMPLE_FILE = "/files/sample-installer.txt";
+export const defaultSoftware: Software[] = [
+  {
+    id: "desktop",
+    name: "Adminuscurator Desktop",
+    description: "The full workspace on your computer, with offline access and native notifications.",
+    icon: "laptop",
+    version: "1.0.0",
+    fileSize: "[XX MB]",
+    releaseDate: "2026-09-01",
+    windowsUrl: SAMPLE_FILE,
+    macUrl: SAMPLE_FILE,
+    isPlaceholder: true,
+  },
+  {
+    id: "mobile",
+    name: "Adminuscurator Mobile",
+    description: "Check dashboards, approve tasks and get alerts on the go.",
+    icon: "smartphone",
+    version: "1.0.0",
+    fileSize: "[XX MB]",
+    releaseDate: "2026-09-01",
+    mobileUrl: SAMPLE_FILE,
+    tabletUrl: SAMPLE_FILE,
+    isPlaceholder: true,
+  },
+  {
+    id: "sync",
+    name: "Curator Sync",
+    description: "Keep files and data in sync between your devices and your workspace.",
+    icon: "refresh",
+    version: "0.9.0",
+    fileSize: "[XX MB]",
+    releaseDate: "2026-08-15",
+    mobileUrl: SAMPLE_FILE,
+    tabletUrl: SAMPLE_FILE,
+    windowsUrl: SAMPLE_FILE,
+    macUrl: SAMPLE_FILE,
+    isPlaceholder: true,
+  },
+  {
+    id: "admin-toolkit",
+    name: "Admin Toolkit",
+    description: "Utilities for administrators to manage users, roles and exports in bulk.",
+    icon: "settings",
+    version: "1.2.0",
+    fileSize: "[XX MB]",
+    releaseDate: "2026-07-20",
+    windowsUrl: SAMPLE_FILE,
+    isPlaceholder: true,
+  },
+];
+
 export const defaultManagedContent: ManagedContent = {
   features: defaultFeatures,
   plans: defaultPlans,
   testimonials: defaultTestimonials,
   faqs: defaultFaqs,
   products: defaultProducts,
+  software: defaultSoftware,
 };

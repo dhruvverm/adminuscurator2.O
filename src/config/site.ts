@@ -107,6 +107,7 @@ export const mainNav = [
   { label: "Features", href: "/features" },
   { label: "Solutions", href: "/solutions" },
   { label: "Pricing", href: "/pricing" },
+  { label: "Downloads", href: "/downloads" },
   { label: "About", href: "/about" },
   { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
@@ -119,6 +120,7 @@ export const footerNav = [
     links: [
       { label: "Features", href: "/features" },
       { label: "Pricing", href: "/pricing" },
+      { label: "Downloads", href: "/downloads" },
       { label: "Integrations", href: "/resources/integrations" },
       { label: "Updates", href: "/resources/updates" },
     ],

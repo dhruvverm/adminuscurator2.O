@@ -55,6 +55,29 @@ export interface Product {
   status: "active" | "draft";
 }
 
+/**
+ * A downloadable app. Leave a platform URL empty when that platform isn't
+ * available — the option is then shown as unavailable instead of a broken link.
+ */
+export interface Software {
+  id: string;
+  name: string;
+  description: string;
+  /** Image URL (e.g. /brand/app-icon.svg). Empty → `icon` on a brand tile. */
+  logo?: string;
+  icon: IconName;
+  version: string;
+  fileSize?: string;
+  /** ISO date, e.g. 2026-09-01. */
+  releaseDate?: string;
+  mobileUrl?: string;
+  tabletUrl?: string;
+  windowsUrl?: string;
+  macUrl?: string;
+  /** Keep true for sample entries — they are labelled on the site. */
+  isPlaceholder: boolean;
+}
+
 /** Content that administrators can edit from /admin. */
 export interface ManagedContent {
   features: Feature[];
@@ -62,4 +85,5 @@ export interface ManagedContent {
   testimonials: Testimonial[];
   faqs: Faq[];
   products: Product[];
+  software: Software[];
 }

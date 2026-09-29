@@ -13,7 +13,8 @@ export type AnalyticsEvent =
   | "select_plan"
   | "begin_checkout"
   | "purchase"
-  | "contact_submit";
+  | "contact_submit"
+  | "download";
 
 type Props = Record<string, string | number | boolean | undefined>;
 

@@ -50,6 +50,25 @@ Prices: leave a plan's price empty to show its placeholder label (e.g. `$XX`). O
 
 ---
 
+## Software downloads
+
+The **/downloads** page lists your apps. Each card shows the logo, name, version, size, release date and the platforms it's available on.
+
+Pressing **Download** never starts a download straight away:
+1. A dialog asks *"Where do you want to download this software?"* with Mobile, Tablet and Laptop / Desktop options.
+2. The visitor sees their chosen device and can change it (Back or **Change**). For desktop they pick Windows or macOS; the one matching their computer is pre-selected.
+3. The download starts only when they press **Download Now**. Store links (App Store, Google Play) open in a new tab, and files on your own site download directly.
+
+**Managing apps**
+* **Full app:** use **/admin → Downloads**.
+* **GitHub Pages site:** edit `defaultSoftware` in `src/content/managed-defaults.ts` and push.
+
+Each app has a name, description, logo URL (or an icon), version, file size, release date, and Mobile / Tablet / Windows / macOS download URLs. **Leave a URL empty when that platform isn't available.** The option is then shown as "Not available" and can't be selected, so visitors never see a broken link. You can put installer files in `public/files/` and link them as `/files/your-app.dmg`.
+
+The four apps included are samples marked with a *Sample* tag. Their links point to `public/files/sample-installer.txt`. Replace them with your real software.
+
+Every **Download Now** click is tracked as a `download` analytics event.
+
 ## Admin & roles
 
 On first start, an administrator is created from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Sign in at `/login`.

@@ -330,6 +330,39 @@ const paths = {
       <path d="m10 9 5 3-5 3V9Z" />
     </>
   ),
+  smartphone: (
+    <>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+      <path d="M11 18.5h2" />
+    </>
+  ),
+  tablet: (
+    <>
+      <rect x="4" y="2.5" width="16" height="19" rx="2.5" />
+      <path d="M11 18.5h2" />
+    </>
+  ),
+  laptop: (
+    <>
+      <rect x="4.5" y="4.5" width="15" height="10.5" rx="1.5" />
+      <path d="M2.5 19h19l-1.5-2.5h-16L2.5 19Z" />
+    </>
+  ),
+  windows: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1" />
+      <rect x="13" y="4" width="7" height="7" rx="1" />
+      <rect x="4" y="13" width="7" height="7" rx="1" />
+      <rect x="13" y="13" width="7" height="7" rx="1" />
+    </>
+  ),
+  apple: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.8-.8-3-.8c-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2-1.1 2.8-2.3.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.7ZM14.1 5.9c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.7-1.2Z"
+    />
+  ),
 } as const;
 
 export type IconName = keyof typeof paths;

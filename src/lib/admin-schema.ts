@@ -113,6 +113,44 @@ export const collections: Record<keyof ManagedContent, CollectionDef> = {
     ],
     blank: () => ({ id: `faq-${Date.now().toString(36)}`, question: "", answer: "" }),
   },
+  software: {
+    key: "software",
+    title: "Downloads",
+    itemLabel: "app",
+    description:
+      "Apps shown on the Downloads page. Leave a platform's URL empty if it isn't available — that option is then disabled instead of showing a broken link.",
+    titleField: "name",
+    fields: [
+      id(),
+      { key: "name", label: "Software name", type: "text", required: true, max: 80 },
+      { key: "description", label: "Short description", type: "textarea", required: true, max: 240 },
+      { key: "logo", label: "Logo image URL", type: "text", hint: "Optional, e.g. /brand/app-icon.svg. Empty = icon below", max: 300 },
+      { key: "icon", label: "Icon (used when no logo)", type: "select", options: iconNames, required: true },
+      { key: "version", label: "Version", type: "text", required: true, hint: "e.g. 2.4.1", max: 30 },
+      { key: "fileSize", label: "File size", type: "text", hint: "Optional, e.g. 84 MB", max: 30 },
+      { key: "releaseDate", label: "Release date", type: "text", hint: "YYYY-MM-DD", max: 10 },
+      { key: "mobileUrl", label: "Mobile download URL", type: "text", hint: "App Store / Google Play link or file. Empty = unavailable", max: 500 },
+      { key: "tabletUrl", label: "Tablet download URL", type: "text", hint: "Empty = unavailable", max: 500 },
+      { key: "windowsUrl", label: "Windows download URL", type: "text", hint: "Empty = unavailable", max: 500 },
+      { key: "macUrl", label: "macOS download URL", type: "text", hint: "Empty = unavailable", max: 500 },
+      { key: "isPlaceholder", label: "Sample / placeholder (labelled on site)", type: "boolean" },
+    ],
+    blank: () => ({
+      id: `app-${Date.now().toString(36)}`,
+      name: "",
+      description: "",
+      logo: "",
+      icon: "package",
+      version: "1.0.0",
+      fileSize: "",
+      releaseDate: "",
+      mobileUrl: "",
+      tabletUrl: "",
+      windowsUrl: "",
+      macUrl: "",
+      isPlaceholder: false,
+    }),
+  },
   products: {
     key: "products",
     title: "Products",
@@ -172,9 +210,10 @@ export function sanitizeCollection(
           if (f.required && !s) return { ok: false, error: `${label} is required.` };
           if (f.type === "select" && s && !f.options?.includes(s)) return { ok: false, error: `${label} has an invalid value.` };
           if (f.key === "id" && !/^[a-z0-9-_]+$/i.test(s)) return { ok: false, error: `${label} may only contain letters, numbers, - and _.` };
-          if ((f.key === "href" || f.key === "avatar") && s && !/^(\/|https:\/\/)/.test(s)) {
+          if ((f.key === "href" || f.key === "avatar" || f.key === "logo" || f.key.endsWith("Url")) && s && !/^(\/|https:\/\/)/.test(s)) {
             return { ok: false, error: `${label} must start with / or https://` };
           }
+          if (f.key === "releaseDate" && s && !/^\d{4}-\d{2}-\d{2}$/.test(s)) return { ok: false, error: `${label} must be in YYYY-MM-DD format.` };
           item[f.key] = s || (f.required ? s : undefined);
         }
       }
