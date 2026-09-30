@@ -224,15 +224,16 @@ export const defaultProducts: Product[] = [
  * empty when it isn't available — that option is then disabled.
  */
 const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.0";
+const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.0";
 
 export const defaultSoftware: Software[] = [
   {
-    id: "adminuscurator-app",
-    name: "Adminuscurator",
+    id: "adminuscurator-optical",
+    name: "Adminuscurator Optical",
     description:
-      "Offline shop management and accounting: customers, prescriptions, stock, billing, credit, expenses and reports. Installs as an app on Android, Windows and Mac; no internet or account needed, and your data stays on your device.",
+      "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. Installs as an app on Android, Windows and Mac; no internet or account needed, and your data stays on your device.",
     logo: "/brand/app-icon.svg",
-    icon: "store",
+    icon: "eye",
     version: "1.25.0",
     releaseDate: "2026-09-18",
     // Android app (APK) for phones and tablets — served from this site
@@ -241,10 +242,30 @@ export const defaultSoftware: Software[] = [
     tabletUrl: "/files/Adminuscurator-1.25.0-b4.apk",
     tabletSize: "177 KB",
     // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
-    // and hosted on the GitHub Release (too large for the website itself)
     windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.0.exe`,
     windowsSize: "106 MB",
     macUrl: `${RELEASE}/Adminuscurator-1.25.0-mac.dmg`,
+    macSize: "218 MB",
+    license: "Free to download and use",
+    isPlaceholder: false,
+  },
+  {
+    id: "adminuscurator-retail",
+    name: "Adminuscurator Retail",
+    description:
+      "Offline management and accounting for clothing shops: products with size & colour variants, per-variant stock and low-stock alerts, GST billing, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
+    logo: "/brand/app-icon.svg",
+    icon: "store",
+    version: "1.25.0",
+    releaseDate: "2026-09-30",
+    mobileUrl: "/files/Adminuscurator-Retail-1.25.0.apk",
+    mobileSize: "185 KB",
+    tabletUrl: "/files/Adminuscurator-Retail-1.25.0.apk",
+    tabletSize: "185 KB",
+    // Desktop installers — built by .github/workflows/retail-desktop.yml
+    windowsUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-Setup-1.25.0.exe`,
+    windowsSize: "106 MB",
+    macUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-1.25.0-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,

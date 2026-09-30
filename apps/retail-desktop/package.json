@@ -1,0 +1,77 @@
+{
+  "name": "adminuscurator-retail-desktop",
+  "productName": "Adminuscurator Retail",
+  "version": "1.25.0",
+  "description": "Adminuscurator Retail \u2014 offline clothing shop management and accounting.",
+  "author": "Adminuscurator",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "SMOKE_TEST=1 electron .",
+    "sync": "node scripts/sync-app.mjs",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "gen-code": "node scripts/gen-code.mjs",
+    "test-license": "node scripts/test-license.mjs"
+  },
+  "build": {
+    "appId": "com.adminuscurator.retail.desktop",
+    "productName": "Adminuscurator Retail",
+    "copyright": "Copyright \u00a9 2026 Adminuscurator",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "license/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "artifactName": "AdminuscuratorRetail-${version}-mac.${ext}",
+      "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "title": "Adminuscurator Retail ${version}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "AdminuscuratorRetail-Setup-${version}.${ext}",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Adminuscurator Retail",
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  }
+}
