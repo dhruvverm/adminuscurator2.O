@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#f4f6fa">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Optical Shop">
+<meta name="apple-mobile-web-app-title" content="Adminuscurator">
 <meta name="description" content="Offline optical shop management and accounting. All data stays on this device.">
 <title>Loading…</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👓</text></svg>">
@@ -1679,7 +1679,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
       updatedAt: App.nowISO(),
 
       settings: {
-        shopName: 'My Optical Shop',
+        shopName: 'Adminuscurator',
         ownerName: '',
         address: '',
         phone: '',
@@ -5079,7 +5079,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
     add(ascii('\nendstream\nendobj\n'));
     var draw = 'q ' + num(W) + ' 0 0 ' + num(drawH) + ' 0 ' + num(H - drawH) + ' cm /Im0 Do Q';
     obj(5, '<< /Length ' + draw.length + ' >>\nstream\n' + draw + '\nendstream');
-    obj(6, '<< /Title (' + pdfString(title) + ') /Producer (Optical Shop Manager) >>');
+    obj(6, '<< /Title (' + pdfString(title) + ') /Producer (Adminuscurator) >>');
 
     var xref = size, table = 'xref\n0 7\n0000000000 65535 f \n';
     for (var i = 1; i <= 6; i++) table += ('0000000000' + offsets[i]).slice(-10) + ' 00000 n \n';
@@ -10253,7 +10253,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
       backupDate: App.today(),
       generatedAt: App.nowISO(),
       appVersion: App.APP_VERSION,
-      appName: 'Optical Shop Manager',
+      appName: 'Adminuscurator',
       shopName: d.settings.shopName,
       counts: {
         customers: M.live(d.customers).length,
@@ -11619,7 +11619,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
     logo = App.safeImg(logo);
     return '<div class="sh-logo' + (logo ? '' : ' no-img') + '">' +
         (logo ? '<img src="' + App.esc(logo) + '" alt="">' : App.icon('glasses', 24)) + '</div>' +
-      '<div class="sh-text"><div class="sh-title">' + App.esc(title || 'My Optical Shop') + '</div>' +
+      '<div class="sh-text"><div class="sh-title">' + App.esc(title || 'Adminuscurator') + '</div>' +
         (sub ? '<div class="sh-sub">' + App.esc(sub) + '</div>' : '') + '</div>';
   };
 
@@ -11627,7 +11627,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
     var el = App.el('#shophead');
     if (!el || !App.db) return;
     var s = App.db.settings;
-    var title = String(s.headerTitle || '').trim() || s.shopName || 'My Optical Shop';
+    var title = String(s.headerTitle || '').trim() || s.shopName || 'Adminuscurator';
     el.hidden = s.headerShow === false;
     el.style.setProperty('--shop-bg', App.safeColor(s.headerBg, '#1E3A5F'));
     el.style.setProperty('--shop-fg', App.safeColor(s.headerFg, '#FFFFFF'));
