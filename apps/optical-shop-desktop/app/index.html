@@ -1541,6 +1541,239 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 }
 
 
+/* ===== 01-license.js ===== */
+/* ============================================================================
+   01-license.js — offline activation lock (7-day and lifetime codes)
+
+   Runs inside the Android app (WebView) and the browser. On the DESKTOP build
+   the Electron shell does the licence check, so this module detects that
+   (window.OpticalShopDesktop) and stays out of the way. Codes are shared with
+   the desktop app — same secret, same format.
+
+   The secret below is injected by build.js from the key file at build time
+   (the placeholder is replaced). Like any offline scheme, a determined user
+   who extracts it could mint codes; it stops ordinary users past the 7 days.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var App = window.App = window.App || {};
+
+  // Electron already gates the desktop app — do nothing there.
+  if (window.OpticalShopDesktop && window.OpticalShopDesktop.isDesktop) {
+    App.license = { required: function () { return false; } };
+    return;
+  }
+
+  var SECRET = 'd216bbf503f4dc29e2b6f7b59f536cad06db088e358bff84127b24d80cf8ce13';
+  // If the build did not inject a secret, fail open (never lock people out by mistake).
+  if (SECRET.indexOf('__') === 0) {
+    App.license = { required: function () { return false; } };
+    return;
+  }
+
+  var ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+  var ID_BYTES = 5, CHECK_BYTES = 4;
+  var KIND = { 0: 'trial', 1: 'lifetime' };
+  var TRIAL_DAYS = 7, DAY = 86400000, TRIAL_MS = TRIAL_DAYS * DAY, SKEW = 6 * 3600000;
+  var STORE_KEY = 'osm.lic.v1';
+
+  function enc(s) { return new TextEncoder().encode(s); }
+  function fromBase32(str) {
+    var bits = 0, value = 0, out = [];
+    for (var i = 0; i < str.length; i++) {
+      var idx = ALPHABET.indexOf(str[i]);
+      if (idx < 0) return null;
+      value = (value << 5) | idx; bits += 5;
+      if (bits >= 8) { out.push((value >>> (bits - 8)) & 0xff); bits -= 8; }
+    }
+    return new Uint8Array(out);
+  }
+  function hex(buf) { return Array.prototype.map.call(buf, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+  function normalize(input) {
+    return String(input || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
+      .replace(/O/g, '0').replace(/[IL]/g, '1').replace(/U/g, 'V');
+  }
+
+  var keyPromise = null;
+  function hmacKey() {
+    if (!keyPromise) keyPromise = crypto.subtle.importKey('raw', enc(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    return keyPromise;
+  }
+  function hmac(bytes) {
+    return hmacKey().then(function (k) { return crypto.subtle.sign('HMAC', k, bytes); }).then(function (sig) { return new Uint8Array(sig); });
+  }
+  function eqBytes(a, b) { if (a.length !== b.length) return false; var d = 0; for (var i = 0; i < a.length; i++) d |= a[i] ^ b[i]; return d === 0; }
+
+  // Returns { id, kind } if genuine, else null.
+  function verify(input) {
+    var buf = fromBase32(normalize(input));
+    if (!buf) return Promise.resolve(null);
+    if (buf.length >= ID_BYTES + 1 + CHECK_BYTES) {
+      var body = buf.subarray(0, ID_BYTES + 1), check = buf.subarray(ID_BYTES + 1, ID_BYTES + 1 + CHECK_BYTES);
+      return hmac(body).then(function (full) {
+        if (eqBytes(check, full.subarray(0, CHECK_BYTES)) && KIND[body[ID_BYTES]] !== undefined)
+          return { id: hex(body.subarray(0, ID_BYTES)), kind: KIND[body[ID_BYTES]] };
+        return legacy(buf);
+      });
+    }
+    return legacy(buf);
+  }
+  function legacy(buf) {
+    if (buf.length !== ID_BYTES + CHECK_BYTES) return null;
+    var id = buf.subarray(0, ID_BYTES), check = buf.subarray(ID_BYTES, ID_BYTES + CHECK_BYTES);
+    return hmac(id).then(function (full) {
+      return eqBytes(check, full.subarray(0, CHECK_BYTES)) ? { id: hex(id), kind: 'trial' } : null;
+    });
+  }
+
+  // ---- signed local state ----
+  function randHex(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return hex(a); }
+  function blank() { return { deviceId: randHex(8), used: {}, active: null, lastSeen: 0 }; }
+  function bodyString(s) { return JSON.stringify({ deviceId: s.deviceId, used: s.used, active: s.active, lastSeen: s.lastSeen }); }
+  function load() {
+    var raw; try { raw = localStorage.getItem(STORE_KEY); } catch (e) { return Promise.resolve(blank()); }
+    if (!raw) return Promise.resolve(blank());
+    var data; try { data = JSON.parse(raw); } catch (e) { var b = blank(); b.tampered = true; return Promise.resolve(b); }
+    return hmac(enc(bodyString(data))).then(function (sig) {
+      if (hex(sig) !== data.sig) { var bad = blank(); bad.tampered = true; return bad; }
+      var ok = blank(); ok.deviceId = data.deviceId; ok.used = data.used || {}; ok.active = data.active || null; ok.lastSeen = data.lastSeen || 0; return ok;
+    });
+  }
+  function save(s) {
+    return hmac(enc(bodyString(s))).then(function (sig) {
+      var out = { deviceId: s.deviceId, used: s.used, active: s.active, lastSeen: s.lastSeen, sig: hex(sig) };
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(out)); } catch (e) {}
+      return s;
+    });
+  }
+
+  function status() {
+    return load().then(function (s) {
+      var now = Date.now();
+      if (s.lastSeen && now < s.lastSeen - SKEW)
+        return { state: 'clock', message: 'The date and time on this device look wrong. Set the correct date and time, then reopen the app.' };
+      if (now > s.lastSeen) { s.lastSeen = now; save(s); }
+      if (s.tampered) return { state: 'locked', message: 'Saved activation could not be verified. Please enter a valid code.' };
+      if (s.active) {
+        if (s.active.kind === 'lifetime' || s.active.expiresAt === null) return { state: 'active', kind: 'lifetime', daysLeft: null };
+        var remaining = s.active.expiresAt - Math.max(now, s.lastSeen);
+        if (remaining > 0) return { state: 'active', kind: 'trial', expiresAt: s.active.expiresAt, daysLeft: Math.ceil(remaining / DAY) };
+        return { state: 'expired', message: 'Your ' + TRIAL_DAYS + '-day access has ended. Enter a new activation code to continue.' };
+      }
+      return { state: 'none', message: 'Enter your activation code to start.' };
+    });
+  }
+
+  function activate(input) {
+    return Promise.all([load(), verify(input)]).then(function (r) {
+      var s = r[0], parsed = r[1], now = Date.now();
+      if (s.lastSeen && now < s.lastSeen - SKEW) return { ok: false, code: 'clock', message: 'The date and time on this device look wrong. Set them correctly and try again.' };
+      if (!parsed) return { ok: false, code: 'invalid', message: 'That code is not valid. Please check it and try again.' };
+      if (s.used[parsed.id]) return { ok: false, code: 'used', message: 'This code has already been used on this device and cannot be used again.' };
+      var startedAt = Math.max(now, s.lastSeen);
+      var expiresAt = parsed.kind === 'lifetime' ? null : startedAt + TRIAL_MS;
+      s.used[parsed.id] = { kind: parsed.kind, activatedAt: startedAt, expiresAt: expiresAt };
+      s.active = { id: parsed.id, kind: parsed.kind, activatedAt: startedAt, expiresAt: expiresAt };
+      s.lastSeen = startedAt;
+      return save(s).then(function () { return { ok: true, kind: parsed.kind }; });
+    });
+  }
+
+  App.license = {
+    required: function () { return true; },
+    status: status,
+    activate: activate,
+    /** Runs onOk() when access is active; otherwise shows the gate and calls onOk() after a successful code. */
+    guard: function (onOk) {
+      status().then(function (st) {
+        if (st.state === 'active') { startWatch(); onOk(); return; }
+        showGate(st, function () { startWatch(); onOk(); });
+      });
+    }
+  };
+
+  // While the app runs, lock it the moment access ends.
+  var watching = false;
+  function startWatch() {
+    if (watching) return; watching = true;
+    setInterval(function () {
+      if (document.getElementById('lic-gate')) return;
+      status().then(function (st) { if (st.state !== 'active') location.reload(); });
+    }, 60000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && !document.getElementById('lic-gate'))
+        status().then(function (st) { if (st.state !== 'active') location.reload(); });
+    });
+  }
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  function showGate(st, onOk) {
+    var boot = document.getElementById('boot'); if (boot) boot.style.display = 'none';
+    var banner = '';
+    if (st.state === 'expired' || st.state === 'locked') banner = '<div class="lic-banner lic-err">' + esc(st.message) + '</div>';
+    else if (st.state === 'clock') banner = '<div class="lic-banner lic-warn">' + esc(st.message) + '</div>';
+    var wrap = document.createElement('div');
+    wrap.id = 'lic-gate';
+    wrap.innerHTML =
+      '<style>' + CSS + '</style>' +
+      '<div class="lic-card" role="dialog" aria-labelledby="lic-title">' +
+        '<div class="lic-logo">' + MARK + '</div>' +
+        '<h1 id="lic-title">Activate Adminuscurator</h1>' +
+        '<p class="lic-sub">' + (st.state === 'expired' ? 'Enter a new activation code to continue.' : 'Enter your activation code to start.') + '</p>' +
+        banner +
+        '<label for="lic-code">Activation code</label>' +
+        '<input id="lic-code" inputmode="latin" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="#XXXX-XXXX-XXXX">' +
+        '<button id="lic-go" type="button">Activate</button>' +
+        '<div class="lic-msg" id="lic-msg" aria-live="polite"></div>' +
+        '<p class="lic-foot">Your access lasts 7 days from activation (or lifetime). Your data always stays on this device.</p>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    var input = wrap.querySelector('#lic-code'), go = wrap.querySelector('#lic-go'), msg = wrap.querySelector('#lic-msg');
+    input.addEventListener('input', function () {
+      var raw = input.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
+      input.value = raw ? '#' + raw.replace(/(.{4})/g, '$1-').replace(/-$/, '') : '';
+      input.classList.remove('err'); msg.textContent = '';
+    });
+    function submit() {
+      go.disabled = true; go.textContent = 'Checking…'; msg.className = 'lic-msg';
+      activate(input.value).then(function (res) {
+        if (res.ok) { msg.className = 'lic-msg ok'; msg.textContent = 'Activated! Opening…'; setTimeout(function () { wrap.remove(); onOk(); }, 500); return; }
+        input.classList.add('err'); msg.className = 'lic-msg err'; msg.textContent = res.message; go.disabled = false; go.textContent = 'Activate';
+      });
+    }
+    go.addEventListener('click', submit);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    setTimeout(function () { input.focus(); }, 60);
+  }
+
+  var MARK = '<svg width="40" height="40" viewBox="0 0 48 48"><g stroke-width="2.5" stroke-linejoin="round">' +
+    '<path d="M7.5 33L15 33L11 41L3.5 41Z" fill="#fff" stroke="#fff" opacity=".62"/>' +
+    '<path d="M40.5 33L33 33L37 41L44.5 41Z" fill="#fff" stroke="#fff" opacity=".62"/>' +
+    '<path d="M14 20L21.5 20L17.5 28L10 28Z" fill="#fff" stroke="#fff" opacity=".82"/>' +
+    '<path d="M34 20L26.5 20L30.5 28L38 28Z" fill="#fff" stroke="#fff" opacity=".82"/>' +
+    '<path d="M20.5 7L27.5 7L31.5 15L16.5 15Z" fill="#fff" stroke="#fff"/></g></svg>';
+
+  var CSS = '#lic-gate{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:20px;' +
+    'background:radial-gradient(900px 500px at 100% -10%,#e8eafe 0%,transparent 60%),#f6f8fc;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0b1220}' +
+    '#lic-gate *{box-sizing:border-box}' +
+    '.lic-card{width:100%;max-width:420px;background:#fff;border:1px solid #e2e6ef;border-radius:20px;box-shadow:0 24px 48px -20px rgba(15,23,42,.25);padding:32px 26px;text-align:center}' +
+    '.lic-logo{width:60px;height:60px;margin:0 auto 16px;border-radius:15px;background:linear-gradient(135deg,#4f46e5,#2a8fdc);display:grid;place-items:center}' +
+    '.lic-card h1{font-size:1.25rem;margin:0 0 6px;letter-spacing:-.02em}' +
+    '.lic-sub{color:#5b6478;margin:0 0 20px;font-size:.92rem;line-height:1.5}' +
+    '.lic-card label{display:block;text-align:left;font-size:.8rem;font-weight:600;margin:0 0 6px}' +
+    '.lic-card input{width:100%;height:50px;padding:0 14px;font-size:1.1rem;letter-spacing:.06em;text-align:center;text-transform:uppercase;border:1.5px solid #e2e6ef;border-radius:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}' +
+    '.lic-card input:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,.15)}' +
+    '.lic-card input.err{border-color:#dc2626}' +
+    '.lic-card button{width:100%;height:48px;margin-top:14px;border:0;border-radius:12px;background:#4f46e5;color:#fff;font-size:1rem;font-weight:650}' +
+    '.lic-card button:disabled{opacity:.6}' +
+    '.lic-msg{min-height:20px;margin-top:12px;font-size:.9rem}.lic-msg.err{color:#dc2626}.lic-msg.ok{color:#059669}' +
+    '.lic-banner{border-radius:12px;padding:11px 13px;font-size:.88rem;margin-bottom:18px;text-align:left;line-height:1.45}' +
+    '.lic-err{background:#fef2f2;border:1px solid #fbd5d5;color:#991b1b}.lic-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}' +
+    '.lic-foot{margin-top:20px;font-size:.76rem;color:#5b6478;line-height:1.5}';
+})();
+
+
 /* ===== 05-icons.js ===== */
 /* =========================================================================
    05-icons.js — SVG icon system
@@ -11844,6 +12077,11 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 
   function boot() {
     if (App.db) return;
+    if (App.license && App.license.required && App.license.required()) { App.license.guard(startBoot); return; }
+    startBoot();
+  }
+
+  function startBoot() {
     keepStorage();
     App.store.init().then(function (how) {
       if (App.db.settings.pinEnabled && App.db.settings.pinHash) {

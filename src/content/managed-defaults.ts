@@ -236,9 +236,9 @@ export const defaultSoftware: Software[] = [
     version: "1.25.0",
     releaseDate: "2026-09-18",
     // Android app (APK) for phones and tablets — served from this site
-    mobileUrl: "/files/Adminuscurator-1.25.0-b3.apk",
+    mobileUrl: "/files/Adminuscurator-1.25.0-b4.apk",
     mobileSize: "177 KB",
-    tabletUrl: "/files/Adminuscurator-1.25.0-b3.apk",
+    tabletUrl: "/files/Adminuscurator-1.25.0-b4.apk",
     tabletSize: "177 KB",
     // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
     // and hosted on the GitHub Release (too large for the website itself)
