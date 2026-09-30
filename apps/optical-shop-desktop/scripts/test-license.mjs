@@ -33,4 +33,15 @@ check("active again", m.status().state === "active");
 fake = realNow + 3 * DAY; // clock moved backwards
 check("detects clock rollback", m.status().state === "clock");
 
+// Lifetime code: never expires.
+fake = realNow;
+const m2 = require("../license/manager.js");
+m2.setPath(fs.mkdtempSync(os.tmpdir() + "/lic-life-"));
+const life = c.generate("lifetime");
+check("activates a lifetime code", m2.activate(life).kind === "lifetime");
+check("lifetime shows no days left", m2.status().state === "active" && m2.status().kind === "lifetime" && m2.status().daysLeft === null);
+fake = realNow + 4000 * DAY; // ~11 years later
+check("lifetime still active years later", m2.status().state === "active");
+check("lifetime code not reusable on same device", m2.activate(life).code === "used");
+
 process.exit(failed ? 1 : 0);

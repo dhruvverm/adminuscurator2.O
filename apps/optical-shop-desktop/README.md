@@ -14,11 +14,18 @@ reinstalling) is refused.
 ### Generate codes
 
 ```bash
-npm run gen-code        # one code, e.g. #A98S-KTV3-45DS
-npm run gen-code -- 20  # twenty codes
+npm run gen-code              # one 7-day code, e.g. #A98S-KTV3-45DS
+npm run gen-code -- 20        # twenty 7-day codes
+npm run gen-code -- lifetime  # one lifetime code (never expires)
+npm run gen-code -- lifetime 5 # five lifetime codes
 ```
 
-Give one code to each customer. Every code is single-use per device.
+There are two kinds of code:
+* **7-day** — unlocks for 7 days, then the app asks for another code.
+* **lifetime** — unlocks permanently on that device.
+
+Give one code to each customer. Every code is single-use per device (a code
+already used on a computer cannot be used there again).
 
 ### How enforcement works (and its limits)
 

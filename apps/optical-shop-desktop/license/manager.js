@@ -66,10 +66,14 @@ function status() {
   if (state.tampered) return { state: "locked", message: "The licence file could not be verified. Please enter a valid activation code." };
 
   if (state.active) {
+    // Lifetime licences never expire.
+    if (state.active.kind === "lifetime" || state.active.expiresAt === null) {
+      return { state: "active", kind: "lifetime", expiresAt: null, daysLeft: null };
+    }
     const effectiveNow = Math.max(now, state.lastSeen);
     const remaining = state.active.expiresAt - effectiveNow;
     if (remaining > 0) {
-      return { state: "active", expiresAt: state.active.expiresAt, daysLeft: Math.ceil(remaining / DAY_MS) };
+      return { state: "active", kind: "trial", expiresAt: state.active.expiresAt, daysLeft: Math.ceil(remaining / DAY_MS) };
     }
     return { state: "expired", message: `Your ${TRIAL_DAYS}-day access has ended. Enter a new activation code to continue.` };
   }
@@ -85,21 +89,22 @@ function activate(input) {
     return { ok: false, code: "clock", message: "The system clock has been changed. Set the correct date and time, then try again." };
   }
 
-  const id = codes.verify(input);
-  if (!id) return { ok: false, code: "invalid", message: "That code is not valid. Please check it and try again." };
+  const parsed = codes.verify(input);
+  if (!parsed) return { ok: false, code: "invalid", message: "That code is not valid. Please check it and try again." };
+  const { id, kind } = parsed;
 
-  // One code, one device, once: a code already used on this device cannot start a new trial.
+  // One code, one device, once: a code already used on this device cannot be used again.
   if (state.used[id]) {
     return { ok: false, code: "used", message: "This code has already been used on this device and cannot be used again." };
   }
 
   const startedAt = Math.max(now, state.lastSeen);
-  const expiresAt = startedAt + TRIAL_MS;
-  state.used[id] = { activatedAt: startedAt, expiresAt };
-  state.active = { id, activatedAt: startedAt, expiresAt };
+  const expiresAt = kind === "lifetime" ? null : startedAt + TRIAL_MS;
+  state.used[id] = { kind, activatedAt: startedAt, expiresAt };
+  state.active = { id, kind, activatedAt: startedAt, expiresAt };
   state.lastSeen = startedAt;
   save(state);
-  return { ok: true, expiresAt, daysLeft: TRIAL_DAYS };
+  return { ok: true, kind, expiresAt, daysLeft: kind === "lifetime" ? null : TRIAL_DAYS };
 }
 
 module.exports = { setPath, status, activate, TRIAL_DAYS };
