@@ -1,0 +1,114 @@
+# Builds the Optical Shop Manager desktop app (Windows installer + macOS dmg)
+# on native GitHub runners and publishes them as a GitHub Release:
+#   tag  optical-shop-v<version from apps/services-desktop/package.json>
+# Runs when the desktop app changes on main, or manually from the Actions tab.
+name: Adminuscurator Services desktop release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/services-desktop/**"
+      - ".github/workflows/services-desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: services-desktop
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: --mac
+          - os: windows-latest
+            target: --win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/services-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/services-desktop/package-lock.json
+      - run: npm ci
+      - name: Licence rules self-test
+        run: npm run test-license
+      - name: Smoke test (app launches, storage works)
+        run: npx electron .
+        env:
+          SMOKE_TEST: "1"
+      - name: Build installer
+        run: npx electron-builder ${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Install and launch the built app (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          MP=$(hdiutil attach -nobrowse -readonly dist/*.dmg | tail -1 | awk -F'\t' '{print $NF}')
+          codesign --verify --deep --strict "$MP/Adminuscurator Services.app"
+          SMOKE_TEST=1 "$MP/Adminuscurator Services.app/Contents/MacOS/Adminuscurator Services"
+          hdiutil detach "$MP"
+      - name: Install and launch the built app (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist\*.exe | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter "Adminuscurator Services.exe" | Select-Object -First 1
+          if (-not $exe) { throw "Installed app not found" }
+          Write-Host "Installed at $($exe.FullName)"
+          $env:SMOKE_TEST = "1"
+          $p = Start-Process $exe.FullName -Wait -PassThru -RedirectStandardOutput smoke.txt
+          Get-Content smoke.txt
+          if ($p.ExitCode -ne 0) { throw "Installed app failed the smoke test (exit $($p.ExitCode))" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            apps/services-desktop/dist/*.dmg
+            apps/services-desktop/dist/*.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(node -p "require('./apps/services-desktop/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Checksums
+        run: cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt && ls -la
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: adminuscurator-services-v${{ steps.v.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Adminuscurator Services ${{ steps.v.outputs.version }}
+          fail_on_unmatched_files: true
+          files: out/*
+          body: |
+            Desktop version of **Adminuscurator Services** — offline service business management and accounting.
+
+            | Platform | File |
+            |---|---|
+            | Windows 10/11 (64-bit) | `AdminuscuratorServices-Setup-${{ steps.v.outputs.version }}.exe` |
+            | macOS (Apple silicon & Intel) | `AdminuscuratorServices-${{ steps.v.outputs.version }}-mac.dmg` |
+
+            The app is not yet code-signed with a paid certificate, so:
+            * **Windows:** if "Windows protected your PC" appears, click **More info → Run anyway**.
+            * **macOS:** open the dmg and drag the app to Applications. On first launch, if macOS says it can't verify the developer, go to **System Settings → Privacy & Security → Open Anyway**.
+
+            Free to download and use. Your data stays on your computer — take regular backups from *Backup & Restore*.

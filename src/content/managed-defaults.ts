@@ -225,6 +225,7 @@ export const defaultProducts: Product[] = [
  */
 const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.0";
 const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.0";
+const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.0";
 
 export const defaultSoftware: Software[] = [
   {
@@ -266,6 +267,27 @@ export const defaultSoftware: Software[] = [
     windowsUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-Setup-1.25.0.exe`,
     windowsSize: "106 MB",
     macUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-1.25.0-mac.dmg`,
+    macSize: "218 MB",
+    license: "Free to download and use",
+    isPlaceholder: false,
+  },
+  {
+    id: "adminuscurator-services",
+    name: "Adminuscurator Services",
+    description:
+      "Offline management and accounting for service businesses: a service price list, appointments/booking, recurring billing, GST invoices, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
+    logo: "/brand/app-icon.svg",
+    icon: "fileText",
+    version: "1.25.0",
+    releaseDate: "2026-09-30",
+    mobileUrl: "/files/Adminuscurator-Services-1.25.0.apk",
+    mobileSize: "185 KB",
+    tabletUrl: "/files/Adminuscurator-Services-1.25.0.apk",
+    tabletSize: "185 KB",
+    // Desktop installers — built by .github/workflows/services-desktop.yml
+    windowsUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-Setup-1.25.0.exe`,
+    windowsSize: "106 MB",
+    macUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-1.25.0-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
