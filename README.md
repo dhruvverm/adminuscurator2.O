@@ -65,13 +65,13 @@ Pressing **Download** never starts a download straight away:
 
 Each app has a name, description, logo URL (or an icon), version, file size, release date, and Mobile / Tablet / Windows / macOS download URLs. **Leave a URL empty when that platform isn't available.** The option is then shown as "Not available" and can't be selected, so visitors never see a broken link. You can put installer files in `public/files/` and link them as `/files/your-app.dmg`.
 
-**Currently listed: Optical Shop Manager 1.25.0**, free to download and use.
+**Currently listed: Adminuscurator 1.25.0**, free to download and use.
 
 | Device | File | Where it's hosted |
 |---|---|---|
-| Mobile / Tablet (Android) | `OpticalShopManager-1.25.0.apk` (177 KB) | `public/files/` on this site |
-| Windows 10/11 | `OpticalShopManager-Setup-1.25.0.exe` (106 MB) | [GitHub Release](https://github.com/dhruvverm/adminuscurator2.O/releases/tag/optical-shop-v1.25.0) |
-| macOS (Apple Silicon and Intel) | `OpticalShopManager-1.25.0-mac.dmg` (218 MB) | same GitHub Release |
+| Mobile / Tablet (Android) | `Adminuscurator-1.25.0.apk` (177 KB) | `public/files/` on this site |
+| Windows 10/11 | `Adminuscurator-Setup-1.25.0.exe` (106 MB) | [GitHub Release](https://github.com/dhruvverm/adminuscurator2.O/releases/tag/adminuscurator-v1.25.0) |
+| macOS (Apple Silicon and Intel) | `Adminuscurator-1.25.0-mac.dmg` (218 MB) | same GitHub Release |
 
 ### The desktop app (`apps/optical-shop-desktop/`)
 

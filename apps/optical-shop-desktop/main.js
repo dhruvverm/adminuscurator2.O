@@ -9,7 +9,7 @@ const { app, BrowserWindow, Menu, dialog, shell, session, ipcMain } = require("e
 const path = require("node:path");
 const license = require("./license/manager");
 
-const APP_NAME = "Optical Shop Manager";
+const APP_NAME = "Adminuscurator";
 const INDEX = path.join(__dirname, "app", "index.html");
 const GATE = path.join(__dirname, "license", "gate.html");
 const SMOKE = process.env.SMOKE_TEST === "1";

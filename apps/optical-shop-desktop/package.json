@@ -1,8 +1,8 @@
 {
   "name": "optical-shop-manager-desktop",
-  "productName": "Optical Shop Manager",
+  "productName": "Adminuscurator",
   "version": "1.25.0",
-  "description": "Offline management and accounting for optical shops.",
+  "description": "Adminuscurator \u2014 offline shop management and accounting.",
   "author": "Adminuscurator",
   "license": "UNLICENSED",
   "private": true,
@@ -17,8 +17,8 @@
     "test-license": "node scripts/test-license.mjs"
   },
   "build": {
-    "appId": "com.opticalshop.manager.desktop",
-    "productName": "Optical Shop Manager",
+    "appId": "com.adminuscurator.desktop",
+    "productName": "Adminuscurator",
     "copyright": "Copyright \u00a9 2026 Adminuscurator",
     "directories": {
       "output": "dist",
@@ -40,13 +40,13 @@
           ]
         }
       ],
-      "artifactName": "OpticalShopManager-${version}-mac.${ext}",
+      "artifactName": "Adminuscurator-${version}-mac.${ext}",
       "icon": "build/icon.png",
       "identity": "-",
       "hardenedRuntime": false
     },
     "dmg": {
-      "title": "Optical Shop Manager ${version}"
+      "title": "Adminuscurator ${version}"
     },
     "win": {
       "target": [
@@ -57,7 +57,7 @@
           ]
         }
       ],
-      "artifactName": "OpticalShopManager-Setup-${version}.${ext}",
+      "artifactName": "Adminuscurator-Setup-${version}.${ext}",
       "icon": "build/icon.png"
     },
     "nsis": {
@@ -66,7 +66,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Optical Shop Manager",
+      "shortcutName": "Adminuscurator",
       "deleteAppDataOnUninstall": false
     }
   },

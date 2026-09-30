@@ -1,4 +1,4 @@
-# Optical Shop Manager — desktop app
+# Adminuscurator — desktop app
 
 An [Electron](https://www.electronjs.org/) wrapper around the offline
 single-file web app (`app/index.html`). It installs like a normal program and
