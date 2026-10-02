@@ -223,9 +223,9 @@ export const defaultProducts: Product[] = [
  * and link them as "/files/…", or use store URLs. Leave a platform's URL
  * empty when it isn't available — that option is then disabled.
  */
-const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.0";
-const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.0";
-const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.0";
+const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.1";
+const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.1";
+const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.1";
 
 export const defaultSoftware: Software[] = [
   {
@@ -235,17 +235,17 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. Installs as an app on Android, Windows and Mac; no internet or account needed, and your data stays on your device.",
     logo: "/brand/app-icon.svg",
     icon: "eye",
-    version: "1.25.0",
-    releaseDate: "2026-09-18",
+    version: "1.25.1",
+    releaseDate: "2026-10-02",
     // Android app (APK) for phones and tablets — served from this site
-    mobileUrl: "/files/Adminuscurator-1.25.0-b7.apk",
-    mobileSize: "177 KB",
-    tabletUrl: "/files/Adminuscurator-1.25.0-b7.apk",
-    tabletSize: "177 KB",
+    mobileUrl: "/files/Adminuscurator-1.25.1.apk",
+    mobileSize: "197 KB",
+    tabletUrl: "/files/Adminuscurator-1.25.1.apk",
+    tabletSize: "197 KB",
     // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
-    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.0.exe`,
+    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.1.exe`,
     windowsSize: "106 MB",
-    macUrl: `${RELEASE}/Adminuscurator-1.25.0-mac.dmg`,
+    macUrl: `${RELEASE}/Adminuscurator-1.25.1-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
@@ -257,16 +257,16 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for clothing shops: products with size & colour variants, per-variant stock and low-stock alerts, GST billing, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "store",
-    version: "1.25.0",
-    releaseDate: "2026-09-30",
-    mobileUrl: "/files/Adminuscurator-Retail-1.25.3.apk",
-    mobileSize: "193 KB",
-    tabletUrl: "/files/Adminuscurator-Retail-1.25.3.apk",
-    tabletSize: "193 KB",
+    version: "1.25.1",
+    releaseDate: "2026-10-02",
+    mobileUrl: "/files/Adminuscurator-Retail-1.25.1.apk",
+    mobileSize: "201 KB",
+    tabletUrl: "/files/Adminuscurator-Retail-1.25.1.apk",
+    tabletSize: "201 KB",
     // Desktop installers — built by .github/workflows/retail-desktop.yml
-    windowsUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-Setup-1.25.0.exe`,
+    windowsUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-Setup-1.25.1.exe`,
     windowsSize: "106 MB",
-    macUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-1.25.0-mac.dmg`,
+    macUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-1.25.1-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
@@ -278,16 +278,16 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for service businesses: a service price list, appointments/booking, recurring billing, GST invoices, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "fileText",
-    version: "1.25.0",
-    releaseDate: "2026-09-30",
-    mobileUrl: "/files/Adminuscurator-Services-1.25.3.apk",
-    mobileSize: "193 KB",
-    tabletUrl: "/files/Adminuscurator-Services-1.25.3.apk",
-    tabletSize: "193 KB",
+    version: "1.25.1",
+    releaseDate: "2026-10-02",
+    mobileUrl: "/files/Adminuscurator-Services-1.25.1.apk",
+    mobileSize: "201 KB",
+    tabletUrl: "/files/Adminuscurator-Services-1.25.1.apk",
+    tabletSize: "201 KB",
     // Desktop installers — built by .github/workflows/services-desktop.yml
-    windowsUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-Setup-1.25.0.exe`,
+    windowsUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-Setup-1.25.1.exe`,
     windowsSize: "106 MB",
-    macUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-1.25.0-mac.dmg`,
+    macUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-1.25.1-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
