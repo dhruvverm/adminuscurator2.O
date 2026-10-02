@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Adminuscurator Retail">
 <meta name="description" content="Offline clothing shop management and accounting. All data stays on this device.">
 <title>Loading…</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👕</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='11' fill='%234f46e5'/><g fill='%23fff'><path d='M7.5 33L15 33L11 41L3.5 41Z' opacity='.62'/><path d='M40.5 33L33 33L37 41L44.5 41Z' opacity='.62'/><path d='M14 20L21.5 20L17.5 28L10 28Z' opacity='.82'/><path d='M34 20L26.5 20L30.5 28L38 28Z' opacity='.82'/><path d='M20.5 7L27.5 7L31.5 15L16.5 15Z'/></g></svg>">
 <style>
 /* ==========================================================================
    Optical Shop Manager — design system
@@ -1857,7 +1857,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
     dashboard: 'home', sale: 'receipt', sales: 'list', payments: 'wallet',
     expenses: 'trendDown', customers: 'users', products: 'box',
     purchases: 'truck', suppliers: 'building', reports: 'chart',
-    backup: 'shield', settings: 'sliders', prescription: 'glasses',
+    backup: 'shield', settings: 'sliders', prescription: 'eye',
     edit: 'pencil', close: 'x', back: 'arrowLeft', warning: 'alert',
     success: 'checkCircle', money: 'rupee', stock: 'box', trash2: 'trash'
   };
@@ -1872,6 +1872,15 @@ if (typeof window !== 'undefined' && window.addEventListener) {
       '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" ' +
       'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
       '<path d="' + d + '"/></svg>';
+  };
+
+  /* The Adminuscurator "Curated Stack" A — the brand mark, monochrome via currentColor. */
+  App.brandMark = function (size) {
+    var sz = size || 24;
+    return '<svg class="ic" width="' + sz + '" height="' + sz + '" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false">' +
+      '<path d="M7.5 33L15 33L11 41L3.5 41Z" opacity=".62"/><path d="M40.5 33L33 33L37 41L44.5 41Z" opacity=".62"/>' +
+      '<path d="M14 20L21.5 20L17.5 28L10 28Z" opacity=".82"/><path d="M34 20L26.5 20L30.5 28L38 28Z" opacity=".82"/>' +
+      '<path d="M20.5 7L27.5 7L31.5 15L16.5 15Z"/></svg>';
   };
 
   /* Icon-only buttons must still be announced to screen readers. */
@@ -4583,7 +4592,7 @@ Minimum version required to store current data is: `+i+`.
 
     var h = '<article class="iv' + (set.invoicePattern === false ? '' : ' iv-pattern') + '" aria-label="Invoice ' + e(s.invoiceNo) + '">' +
       '<header class="iv-top"><div class="iv-shop">' +
-        '<div class="iv-logo' + (logo ? ' has-img' : '') + '">' + (logo ? '<img src="' + e(logo) + '" alt="">' : App.icon('glasses', 30)) + '</div>' +
+        '<div class="iv-logo' + (logo ? ' has-img' : '') + '">' + (logo ? '<img src="' + e(logo) + '" alt="">' : App.brandMark(30)) + '</div>' +
         '<div><div class="iv-shopname">' + e(set.shopName) + '</div>' +
           (set.address ? '<div class="iv-shopmeta">' + e(set.address).replace(/\n/g, '<br>') + '</div>' : '') +
           ((contact || set.gstin) ? '<div class="iv-shopmeta">' + (contact ? App.icon('phone', 13) + '<span>' + e(contact) + '</span>' : '') +
@@ -4775,6 +4784,19 @@ Minimum version required to store current data is: `+i+`.
     ctx.closePath();
   }
 
+  /* The Adminuscurator A mark drawn on canvas (five blocks on a 1:2 slope). */
+  function drawBrand(ctx, cx, cy, s, color) {
+    var k = s / 48, ox = cx - 24 * k, oy = cy - 24 * k;
+    function poly(pts, a) {
+      ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = color; ctx.beginPath();
+      pts.forEach(function (pt, i) { var x = ox + pt[0] * k, y = oy + pt[1] * k; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    poly([[7.5,33],[15,33],[11,41],[3.5,41]], 0.62); poly([[40.5,33],[33,33],[37,41],[44.5,41]], 0.62);
+    poly([[14,20],[21.5,20],[17.5,28],[10,28]], 0.82); poly([[34,20],[26.5,20],[30.5,28],[38,28]], 0.82);
+    poly([[20.5,7],[27.5,7],[31.5,15],[16.5,15]], 1);
+  }
+
   function glasses(ctx, cx, cy, s, color) {
     var r = s * 0.2, gap = s * 0.12, lx = cx - gap / 2 - r, rx = cx + gap / 2 + r;
     ctx.save();
@@ -4843,7 +4865,7 @@ Minimum version required to store current data is: `+i+`.
     ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
 
     /* the shop's own stationery: faint frames across the page */
-    if (set.invoicePattern !== false) {
+    if (false) {
       ctx.save();
       ctx.globalAlpha = 0.055;
       for (var py = 120; py < H; py += 150) {
@@ -4882,7 +4904,7 @@ Minimum version required to store current data is: `+i+`.
       ctx.drawImage(img, P + (112 - iw) / 2, 56 + (112 - ih) / 2, iw, ih);
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fill();
-      glasses(ctx, P + 56, 118, 70, '#FFFFFF');
+      drawBrand(ctx, P + 56, 112, 86, '#FFFFFF');
     }
 
     ctx.textAlign = 'left'; ctx.fillStyle = '#FFFFFF';
@@ -5738,7 +5760,7 @@ Minimum version required to store current data is: `+i+`.
         html += '<tr class="clickable" data-id="' + c.id + '">' +
           '<td><div class="flex aic gap12"><div class="avatar">' + App.esc(App.initials(c.name)) + '</div>' +
           '<div><div class="b">' + App.esc(c.name) + '</div><div class="tiny dim mono">' + App.esc(c.code) +
-          (st.rxCount ? '</div><div class="tiny dim mono">' + App.icon('glasses', 13) + ' ' + st.rxCount + ' Rx' : '') + '</div></div></div></td>' +
+          (st.rxCount ? '</div><div class="tiny dim mono">' + App.icon('eye', 13) + ' ' + st.rxCount + ' Rx' : '') + '</div></div></div></td>' +
           '<td class="mono">' + App.esc(c.mobile || '—') + '</td>' +
           '<td class="num right">' + st.invoices + '</td>' +
           '<td class="num right">' + App.money(st.billed) + '</td>' +
@@ -8487,7 +8509,7 @@ Minimum version required to store current data is: `+i+`.
   function rxBlock(c) {
     var rxs = c ? M.customerRx(c.id) : [];
     var chosen = chosenRx();
-    var head = '<div class="rx-mini-head">' + App.icon('glasses', 17) + '<span>Eye prescription</span>';
+    var head = '<div class="rx-mini-head">' + App.icon('eye', 17) + '<span>Eye prescription</span>';
     var h = '<div class="rx-mini">';
     if (c && rxs.length) {
       h += head + '<button type="button" class="link-btn" id="nsnewrx">' + App.icon('plus', 15) + '<span>New</span></button></div>' +
@@ -9337,7 +9359,7 @@ Minimum version required to store current data is: `+i+`.
         ? '<div class="sm muted">' + (d.rx.date ? App.fmtDate(d.rx.date) : 'Typed for this bill') + (d.rx.doctor ? ' · Dr. ' + App.esc(d.rx.doctor) : '') + '</div>' +
           '<div class="rxpick-line">' + App.esc(rxLine(d.rx)) + '</div>'
         : '<div class="sm muted">No prescription on this invoice.</div>') +
-      (!cancelled ? '<button class="btn btn-block mt12" id="ivrx" type="button">' + App.icon('glasses', 18) +
+      (!cancelled ? '<button class="btn btn-block mt12" id="ivrx" type="button">' + App.icon('eye', 18) +
         '<span>' + (d.rx ? 'Change prescription' : 'Add prescription') + '</span></button>' : '') +
       '</div></div>';
 
@@ -11463,7 +11485,7 @@ Minimum version required to store current data is: `+i+`.
   function logoBlock(src) {
     src = App.safeImg(src);
     return '<div class="logo-pick">' +
-      '<div class="logo-prev">' + (src ? '<img src="' + App.esc(src) + '" alt="Shop logo">' : App.icon('glasses', 30)) + '</div>' +
+      '<div class="logo-prev">' + (src ? '<img src="' + App.esc(src) + '" alt="Shop logo">' : App.brandMark(30)) + '</div>' +
       '<div style="flex:1;min-width:0"><div class="b">Shop logo</div>' +
         '<div class="sm muted">Shown at the top of every invoice, PDF and WhatsApp picture. A square logo looks best.</div>' +
         '<div class="flex gap8 mt8 wrap">' +
@@ -12031,7 +12053,7 @@ Minimum version required to store current data is: `+i+`.
   UI.shopHeaderHTML = function (title, sub, logo) {
     logo = App.safeImg(logo);
     return '<div class="sh-logo' + (logo ? '' : ' no-img') + '">' +
-        (logo ? '<img src="' + App.esc(logo) + '" alt="">' : App.icon('glasses', 24)) + '</div>' +
+        (logo ? '<img src="' + App.esc(logo) + '" alt="">' : App.brandMark(24)) + '</div>' +
       '<div class="sh-text"><div class="sh-title">' + App.esc(title || 'Adminuscurator') + '</div>' +
         (sub ? '<div class="sh-sub">' + App.esc(sub) + '</div>' : '') + '</div>';
   };
