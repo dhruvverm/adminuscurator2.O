@@ -238,9 +238,9 @@ export const defaultSoftware: Software[] = [
     version: "1.25.0",
     releaseDate: "2026-09-18",
     // Android app (APK) for phones and tablets — served from this site
-    mobileUrl: "/files/Adminuscurator-1.25.0-b6.apk",
+    mobileUrl: "/files/Adminuscurator-1.25.0-b7.apk",
     mobileSize: "177 KB",
-    tabletUrl: "/files/Adminuscurator-1.25.0-b6.apk",
+    tabletUrl: "/files/Adminuscurator-1.25.0-b7.apk",
     tabletSize: "177 KB",
     // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
     windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.0.exe`,
@@ -259,9 +259,9 @@ export const defaultSoftware: Software[] = [
     icon: "store",
     version: "1.25.0",
     releaseDate: "2026-09-30",
-    mobileUrl: "/files/Adminuscurator-Retail-1.25.2.apk",
+    mobileUrl: "/files/Adminuscurator-Retail-1.25.3.apk",
     mobileSize: "193 KB",
-    tabletUrl: "/files/Adminuscurator-Retail-1.25.2.apk",
+    tabletUrl: "/files/Adminuscurator-Retail-1.25.3.apk",
     tabletSize: "193 KB",
     // Desktop installers — built by .github/workflows/retail-desktop.yml
     windowsUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-Setup-1.25.0.exe`,
@@ -280,9 +280,9 @@ export const defaultSoftware: Software[] = [
     icon: "fileText",
     version: "1.25.0",
     releaseDate: "2026-09-30",
-    mobileUrl: "/files/Adminuscurator-Services-1.25.2.apk",
+    mobileUrl: "/files/Adminuscurator-Services-1.25.3.apk",
     mobileSize: "193 KB",
-    tabletUrl: "/files/Adminuscurator-Services-1.25.2.apk",
+    tabletUrl: "/files/Adminuscurator-Services-1.25.3.apk",
     tabletSize: "193 KB",
     // Desktop installers — built by .github/workflows/services-desktop.yml
     windowsUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-Setup-1.25.0.exe`,
