@@ -4707,12 +4707,8 @@ Minimum version required to store current data is: `+i+`.
     });
   };
 
-  /* the bill's own copy if it has one; bills made before this change point at the saved record */
-  INV.rxOf = function (s) {
-    var rx = s.prescription && typeof s.prescription === 'object' ? s.prescription
-      : (s.prescriptionId ? M.find('prescriptions', s.prescriptionId) : null);
-    return INV.hasRx(rx) ? rx : null;
-  };
+  /* service invoices never print an eye prescription */
+  INV.rxOf = function () { return null; };
 
   /* everything the invoice needs, gathered once */
   INV.data = function (saleId) {
@@ -5640,7 +5636,7 @@ Minimum version required to store current data is: `+i+`.
       var name = INV.fileName(d), nat = App.native();
       if (nat && typeof nat.saveImage === 'function') {
         var r = nat.saveImage(png.split(',')[1], name);
-        if (r && r.indexOf('OK') === 0) App.toast('Invoice picture saved to Pictures › OpticalShop', 'ok', 4500);
+        if (r && r.indexOf('OK') === 0) App.toast('Invoice picture saved to Pictures › Adminuscurator', 'ok', 4500);
         else App.toast(r || 'Could not save the picture', 'err', 6000);
         return;
       }
@@ -5962,7 +5958,7 @@ Minimum version required to store current data is: `+i+`.
     html += '<div class="card">';
     if (!list.length) {
       html += UI.empty('users', q ? 'No customers found' : 'No customers yet',
-        q ? 'Try a different name or number' : 'Add your first customer, or bring in your register with Import CSV',
+        q ? 'Try a different name or number' : 'Add your first customer, or bring in your list with Import CSV',
         q ? '' : '+ New Customer', 'newcust');
     } else {
       html += '<div class="tablewrap"><table class="tbl"><thead><tr>' +
@@ -5973,8 +5969,7 @@ Minimum version required to store current data is: `+i+`.
         var st = M.customerStats(c.id);
         html += '<tr class="clickable" data-id="' + c.id + '">' +
           '<td><div class="flex aic gap12"><div class="avatar">' + App.esc(App.initials(c.name)) + '</div>' +
-          '<div><div class="b">' + App.esc(c.name) + '</div><div class="tiny dim mono">' + App.esc(c.code) +
-          (st.rxCount ? '</div><div class="tiny dim mono">' + App.icon('eye', 13) + ' ' + st.rxCount + ' Rx' : '') + '</div></div></div></td>' +
+          '<div><div class="b">' + App.esc(c.name) + '</div><div class="tiny dim mono">' + App.esc(c.code) + '</div></div></div></td>' +
           '<td class="mono">' + App.esc(c.mobile || '—') + '</td>' +
           '<td class="num right">' + st.invoices + '</td>' +
           '<td class="num right">' + App.money(st.billed) + '</td>' +
@@ -6545,673 +6540,156 @@ Minimum version required to store current data is: `+i+`.
 
 /* ===== 41b-customers-csv.js ===== */
 /* =========================================================================
-   41b-customers-csv.js — customers: import and export CSV in the shop's register layout
-
-     A  S.No (ignored)      B  Name        C  Address      D  Right eye   E  Left eye
-     F  ADD                 G  Vision      H  Date(s)      I  Details (what they bought)
-     J  Ref.                K  Contact no. L  Remarks
-
-   Row 1 may hold the headings. Repeat visits of one person (same mobile + name) become one
-   customer with a prescription per visit. Text that has no field of its own is kept as
-   labelled lines in the customer's notes, so an export gives the same register back.
+   41b-customers-csv.js — import and export the customer list as a CSV.
+   A plain spreadsheet: one row per customer. Opens in Excel / Google Sheets.
+   Columns: Customer ID, Name, Mobile, Alternate, Email, Address, Date of birth,
+   Notes, plus read-only totals on export (Invoices / Purchased / Paid / Due).
+   Public API (used by 41-customers.js): X.exportRegister(list), X.importDialog().
    ========================================================================= */
 (function () {
   'use strict';
-  var UI = App.UI, M = App.M;
+  var App = window.App, M = App.M, UI = App.UI;
   var X = {};
   App.CustomerCSV = X;
 
-  var HEADINGS = ['S.NO.', 'NAME', 'ADDRESS', 'RIGHT EYE', 'LEFT EYE', 'ADD', 'VISION', 'DATE', 'DETAILS', 'REF.', 'CONTACT NO.', 'REMARKS'];
-
-  /* ---------------- small readers ---------------- */
-  function clean(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
-  function up(v) { return clean(v).toUpperCase(); }
-  function sgn(x) { return (x > 0 ? '+' : x < 0 ? '-' : '') + Math.abs(x).toFixed(2); }
-  function numStr(s) { var x = parseFloat(s); return isFinite(x) ? sgn(x) : ''; }
-  function dmy(iso) { var p = String(iso).split('-'); return p.length === 3 ? (+p[2]) + '.' + (+p[1]) + '.' + p[0] : iso; }
-
-  /* '2.7.2025/23.7.2026' -> ['2025-07-02', '2026-07-23']  (also 02-07-25, 2025-07-02) */
-  var MONTHS = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
-  function parseDates(v) {
-    var out = [];
-    function push(yy, mm, dd) {
-      if (yy < 100) yy += yy < 70 ? 2000 : 1900;
-      var dt = new Date(yy, mm - 1, dd);
-      if (yy >= 1950 && yy <= 2100 && dt.getMonth() === mm - 1 && dt.getDate() === dd) out.push(App.dstr(dt));
-    }
-    String(v || '').toUpperCase().replace(/([.\-\/])\1+/g, '$1').replace(
-      /(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4}|\d{2})(?!\d)|(?:(\d{1,2})[.\-\/ ]?)?(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[.\-\/ ]?(\d{4}|\d{2})(?!\d)|(?:^|[^\d.])(\d{1,2})[.\-\/](\d{4})(?!\d)/g,
-      function (m, Y, Mo, D, d, mo, y, md, mon, my, sm, sy) {
-        if (Y) push(+Y, +Mo, +D);
-        else if (d) push(+y, +mo, +d);
-        else if (mon) push(+my, MONTHS[mon], md ? +md : 1);
-        else if (sm) push(+sy, +sm, 1);
-        return m;
-      });
-    return out;
-  }
-
-  /* '9876543210/9812345678', '9876543210(RAHUL)' -> numbers + the words around them */
-  function phones(v) {
-    var list = [];
-    String(v || '').split(/[\/,;]|\bOR\b/i).forEach(function (part) {
-      var digits = part.replace(/\D/g, '');
-      if (digits.length === 12 && digits.indexOf('91') === 0) digits = digits.slice(2);
-      if (digits.length >= 6 && digits.length <= 13 && list.indexOf(digits) < 0) list.push(digits);
-    });
-    return { list: list, text: clean(String(v || '').replace(/[\d\/()\-+.,;:]+/g, ' ')) };
-  }
-
-  /* 'R-2.00/-3.00X10*' -> { eye:'R', sph:'-2.00', cyl:'-3.00', axis:'10' }
-     'R-2.50X180' is a cylinder on its own (plano sphere). Returns null when it is not a power. */
-  var NUM = '([+-]?\\d{1,3}(?:\\.\\d{1,2})?)';
-  var POWER_RE = new RegExp('^(?:(PLANO|PL)|' + NUM + ')?\\s*(?:SPH|DS)?\\s*(?:/\\s*' + NUM + '\\s*(?:CYL|DC)?)?\\s*(?:X\\s*(\\d{1,3}))?$');
-  /* '-125' written without the point means -1.25 */
-  function powerNum(v) { return /^[+-]?\d{3}$/.test(v) ? numStr(parseFloat(v) / 100) : numStr(v); }
-  function parseEye(raw) {
-    var s = up(raw).replace(/[*`_]/g, '').replace(/([+-])\1+/g, '$1').trim();
-    if (!s) return null;
-    var note = '';
-    /* a note after the power — '(-0.75)', '( CL SPH-2.00)' — or the vision '6/9' */
-    s = s.replace(/\s*\(([^)]*)\)\s*$/, function (m0, inner) { note = clean(inner); return ''; });
-    s = s.replace(/\s+(\d\/\d{1,2}P?)$/, function (m0, v) { note = (note ? note + ' · ' : '') + 'Vision ' + v; return ''; });
-    s = s.replace(/\s*\/\s*NIL$/, '');
-    var eye = '', m = s.match(/^(RE|LE|R|L)(?![A-Z])\s*[:.]?\s*/);
-    if (m) { eye = m[1].charAt(0); s = s.slice(m[0].length); }
-    if (!s || /^(NIL|NA|X+|-+|\.+)$/.test(s)) return { eye: eye, empty: true, note: note };
-    var p = s.match(POWER_RE);
-    if (!p || (!p[1] && !p[2] && !p[3])) return null;
-    if (!p[1] && !/[.+-]/.test((p[2] || '') + (p[3] || ''))) return null;   /* '6/9' is vision, not a power */
-    var sph = p[1] ? '0.00' : (p[2] ? powerNum(p[2]) : '');
-    var cyl = p[3] ? powerNum(p[3]) : '';
-    var axis = p[4] ? String(parseInt(p[4], 10)) : '';
-    if (axis && !cyl && sph) { cyl = sph; sph = '0.00'; }
-    if (cyl === '0.00') { cyl = ''; axis = ''; }
-    if (!sph && cyl) sph = '0.00';
-    return { eye: eye, sph: sph, cyl: cyl, axis: axis, note: note };
-  }
-
-  /* 'ADD+2.25 BE' · 'ADD 2.50 RE/ LE 2.00' · 'ADD R+2.00/L+2.25' -> { od, os } */
-  function parseAdd(raw) {
-    var s = up(raw);
-    if (!/^ADD(?!RESS)/.test(s)) return null;
-    s = s.replace(/^ADD\s*[:.]?\s*/, '');
-    var nums = s.match(/[+-]?\d{1,2}(?:\.\d{1,2})?/g) || [];
-    if (!nums.length) return null;
-    if (nums.length >= 2) {
-      var leftFirst = /^L/.test(s);
-      return { od: numStr(leftFirst ? nums[1] : nums[0]), os: numStr(leftFirst ? nums[0] : nums[1]) };
-    }
-    var v = numStr(nums[0]);
-    var re = /(^|[^A-Z])R(E)?(?![A-Z])/.test(s), le = /(^|[^A-Z])L(E)?(?![A-Z])/.test(s), be = /(^|[^A-Z])BE(?![A-Z])/.test(s);
-    if (re && !le && !be) return { od: v, os: '' };
-    if (le && !re && !be) return { od: '', os: v };
-    return { od: v, os: v };
-  }
-
-  /* ---------------- register row -> record ---------------- */
-  function readRow(r, L) {
-    function cell(k) { return clean(r[L + k]); }
-    var name = cell(0);
-    if (!name) return null;
-    var rec = { name: name, address: cell(1), od: null, os: null, add: null, rxNotes: [], notes: [], dates: [], mobile: '', alt: '' };
-
-    [cell(2), cell(3)].forEach(function (raw, i) {
-      if (!raw) return;
-      var p = parseEye(raw);
-      if (p && p.empty) { if (p.note) rec.rxNotes.push(raw); return; }
-      if (p) {
-        var slot = (p.eye || (i === 0 ? 'R' : 'L')) === 'R' ? 'od' : 'os';
-        if (!rec[slot]) { rec[slot] = p; if (p.note) rec.rxNotes.push((slot === 'od' ? 'R ' : 'L ') + p.note); }
-        else rec.rxNotes.push(raw);
-      } else if (/^[\d.\/\- ]+$/.test(raw) && parseDates(raw).length) {
-        rec.dates = rec.dates.concat(parseDates(raw));
-      } else {
-        rec.rxNotes.push(raw);
-      }
-    });
-
-    var addRaw = cell(4);
-    if (addRaw) {
-      var a = parseAdd(addRaw), p2 = a ? null : parseEye(addRaw);
-      if (a) rec.add = a;
-      else if (p2 && !p2.empty && p2.eye && !rec[p2.eye === 'R' ? 'od' : 'os']) rec[p2.eye === 'R' ? 'od' : 'os'] = p2;
-      else if (!(p2 && p2.empty)) rec.rxNotes.push(addRaw);
-    }
-    var vision = cell(5);
-    if (vision) rec.rxNotes.unshift('Vision ' + vision);
-
-    var visit = cell(6), details = cell(7);
-    var found = parseDates(visit);
-    rec.details = details;
-    rec.visitDates = found.slice();
-    rec.remarks = cell(10);
-    rec.dates = rec.dates.concat(found);
-    if (visit && !found.length) { rec.notes.push('Date: ' + visit); visit = ''; }
-    if (visit) rec.notes.push('Visit ' + visit + (details ? ' — ' + details : ''));
-    else if (details) rec.notes.push('Bought: ' + details);
-
-    var ref = cell(8);
-    if (ref) rec.notes.push('Ref: ' + ref);
-
-    var contact = cell(9), ph = phones(contact);
-    rec.mobile = ph.list[0] || '';
-    rec.alt = ph.list[1] || '';
-    if (ph.text) rec.notes.push('Contact: ' + contact);
-
-    var rem = cell(10);
-    if (rem) {
-      var ph2 = phones(rem);
-      if (ph2.list.length && !ph2.text && !rec.alt && ph2.list[0] !== rec.mobile) rec.alt = ph2.list[0];
-      else if (!(ph2.list.length && !ph2.text)) rec.notes.push('Remarks: ' + rem);
-    }
-    var extra = r.slice(L + 11).map(clean).filter(Boolean);
-    if (extra.length) rec.notes.push('More: ' + extra.join(' · '));
-
-    rec.dates.sort();
-    rec.hasRx = !!(rec.od || rec.os || rec.add || vision);
-    if (!rec.hasRx && rec.rxNotes.length) rec.notes.push('Eye: ' + rec.rxNotes.join(' · '));
-    return rec;
-  }
-
-  /* "YASH SHARMA NEW POWER" and "YASH SHARMA" with one mobile number are the same person */
-  function nameKey(n) {
-    return up(n).replace(/\(.*?\)/g, ' ').replace(/\b(NEW|OLD|LAST|POWER|PWR|NOT|CORRECT|WRONG|JI)\b/g, ' ')
-      .replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim() || up(n);
-  }
-  /* same person = same mobile + name; with no mobile, same name + address; with neither,
-     same name + the same first visit (dates and what they bought) */
-  function mergeKey(name, mobile, address, visit) {
-    var digits = String(mobile || '').replace(/\D/g, '');
-    if (digits.length >= 10) return 'm' + digits.slice(-10) + '|' + nameKey(name);
-    var ak = up(address).replace(/[^A-Z0-9]/g, '');
-    if (ak) return 'a' + nameKey(name) + '|' + ak;
-    return visit ? 'v' + nameKey(name) + '|' + visit : '';
-  }
-  function visitSig(lines) {
-    for (var i = 0; i < lines.length; i++) {
-      var m = /^Visit (.*?)(?: — (.*))?$/.exec(lines[i]), b = /^Bought: (.*)$/.exec(lines[i]);
-      if (m) return parseDates(m[1]).join(',') + '|' + up(m[2] || '');
-      if (b) return '|' + up(b[1]);
-    }
-    return '';
-  }
-  function eyeObj(p, add) { return { sph: p ? p.sph : '', cyl: p ? p.cyl : '', axis: p ? p.axis : '', add: add || '', pd: '' }; }
-  function rxKey(date, od, os) {
-    od = od || {}; os = os || {};
-    return [date, od.sph, od.cyl, od.axis, od.add, os.sph, os.cyl, os.axis, os.add].map(function (v) { return v || ''; }).join('|');
-  }
-
-  /* the column that holds NAME: from the heading row, else from where the R… powers are */
-  function findLayout(rows) {
-    for (var i = 0; i < Math.min(rows.length, 5); i++) {
-      var at = rows[i].map(up).indexOf('NAME');
-      if (at >= 0) return { L: at, start: i + 1 };
-    }
-    var best = 1, bestScore = -1;
-    for (var L = 0; L <= 3; L++) {
-      var score = 0;
-      rows.slice(0, 400).forEach(function (r) {
-        var p = parseEye(r[L + 2]);
-        if (p && !p.empty && p.eye !== 'L') score++;
-      });
-      if (score > bestScore) { bestScore = score; best = L; }
-    }
-    return { L: best, start: 0 };
-  }
-
-  /* ---------------- plan: what an import would do ---------------- */
-  X.plan = function (rows) {
-    var lay = findLayout(rows);
-    var existing = {};
-    M.customers().forEach(function (c) {
-      var k = mergeKey(c.name, c.mobile, c.address, visitSig(String(c.notes || '').split('\n')));
-      if (k && !existing[k]) existing[k] = c;
-    });
-    var haveRx = {}, havePowers = {};
-    App.db.prescriptions.forEach(function (rx) {
-      if (rx.deletedAt) return;
-      (haveRx[rx.customerId] = haveRx[rx.customerId] || {})[rxKey(rx.date, rx.od, rx.os)] = true;
-      (havePowers[rx.customerId] = havePowers[rx.customerId] || {})[rxKey('', rx.od, rx.os)] = true;
-    });
-
-    /* bills already in the app, so the same visit is never billed twice */
-    var RS = App.RegisterSales, billedKeys = {}, billedOn = {}, boughtBy = {};
-    function itemKey(it) { return up(it.name) + ':' + Math.round(App.n(it.amount)); }
-    App.db.sales.forEach(function (s) {
-      if (s.status === 'cancelled') return;
-      if (s.importKey) billedKeys[s.importKey] = true;
-      if (!s.customerId) return;
-      billedOn[s.customerId + '|' + s.date + '|' + Math.round(App.n(s.total))] = true;
-      /* every item each customer has already been billed for, counted */
-      var bag = boughtBy[s.customerId] || (boughtBy[s.customerId] = {});
-      (s.items || []).forEach(function (it) { var k2 = itemKey(it); bag[k2] = (bag[k2] || 0) + 1; });
-    });
-
-    var groups = {}, order = [], total = 0, skipped = 0;
-    for (var i = lay.start; i < rows.length; i++) {
-      var r = rows[i];
-      if (!r.some(function (v) { return clean(v); })) continue;
-      total++;
-      var rec = readRow(r, lay.L);
-      if (!rec) { skipped++; continue; }
-      var k = mergeKey(rec.name, rec.mobile, rec.address, visitSig(rec.notes)) || ('row' + i);
-      if (!groups[k]) { groups[k] = { existing: existing[k] || null, recs: [] }; order.push(k); }
-      groups[k].recs.push(rec);
-    }
-
-    var plan = { total: total, skipped: skipped, header: lay.start > 0, groups: [], newCustomers: 0, known: 0, rxToAdd: 0, joined: 0, sample: [],
-      salesToAdd: 0, salesValue: 0, salesEstimated: 0, salesItems: 0, salesSample: [] };
-    order.forEach(function (k) {
-      var g = groups[k];
-      var seen = g.existing ? Object.assign({}, haveRx[g.existing.id] || {}) : {};
-      /* undated rows are matched on the powers alone, so a re-import doesn't pile them up */
-      var samePowers = g.existing ? (havePowers[g.existing.id] || {}) : {};
-      g.rx = [];
-      g.recs.forEach(function (rec) {
-        if (!rec.hasRx) return;
-        var date = rec.dates.length ? rec.dates[rec.dates.length - 1] : '';
-        var od = eyeObj(rec.od, rec.add && rec.add.od), os = eyeObj(rec.os, rec.add && rec.add.os);
-        var key = rxKey(date, od, os);
-        if (seen[key] || (!date && samePowers[rxKey('', od, os)])) return;   /* a later visit with the same powers is real history */
-        seen[key] = true;
-        g.rx.push({ date: date, od: od, os: os, notes: rec.rxNotes.join(' · ') });
-      });
-      /* bills from the DETAILS column */
-      g.sales = [];
-      var seenBills = {}, found = [];
-      g.recs.forEach(function (rec) {
-        if (!rec.details || !RS) return;
-        RS.visits(rec.details, rec.visitDates).forEach(function (b) { b.rec = rec; found.push(b); });
-      });
-      /* oldest first, so an old visit is matched to an old bill before a newer repeat purchase is */
-      found.sort(function (a, b) { return (a.date || '') < (b.date || '') ? -1 : (a.date || '') > (b.date || '') ? 1 : 0; });
-      var bag = g.existing ? Object.assign({}, boughtBy[g.existing.id] || {}) : null;
-      found.forEach(function (b) {
-          var rec = b.rec;
-          delete b.rec;
-          var rawKey = up(b.raw.join(' ')).replace(/[^A-Z0-9]/g, '').slice(0, 120);
-          var key = 'reg|' + k + '|' + (b.date || '') + '|' + b.total + '|' + rawKey;
-          if (seenBills[key] || billedKeys[key]) return;
-          if (g.existing && billedOn[g.existing.id + '|' + b.date + '|' + Math.round(b.total)]) return;
-          if (bag) {
-            /* everything on this bill is already on the customer's bills — however the visits were grouped */
-            var need = {};
-            b.items.forEach(function (it) { var k2 = itemKey(it); need[k2] = (need[k2] || 0) + 1; });
-            var have = Object.keys(need).every(function (k2) { return (bag[k2] || 0) >= need[k2]; });
-            if (have) { Object.keys(need).forEach(function (k2) { bag[k2] -= need[k2]; }); return; }
-          }
-          seenBills[key] = true;
-          b.key = key;
-          b.method = RS.method(rec.remarks, '');
-          g.sales.push(b);
-          plan.salesToAdd++;
-          plan.salesValue += b.total;
-          plan.salesItems += b.items.length;
-          if (b.estimated) plan.salesEstimated++;
-          if (plan.salesSample.length < 5 && b.items.length > 1 && !b.estimated) plan.salesSample.push({ name: rec.name, bill: b });
-      });
-
-      if (g.existing) plan.known++; else plan.newCustomers++;
-      plan.joined += g.recs.length - 1;
-      plan.rxToAdd += g.rx.length;
-      plan.groups.push(g);
-      if (plan.sample.length < 6) plan.sample.push(g);
-    });
-    return plan;
-  };
-
-  /* ---------------- apply the plan (in small steps so the screen stays responsive) ---------------- */
-  X.apply = function (plan, onProgress, opts) {
-    opts = opts || {};
-    var withSales = opts.withSales !== false;
-    /* old bills are numbered REG-00001… oldest first, apart from the shop's own invoice numbers */
-    var counters = App.db.counters || (App.db.counters = {});
-    var billNo = App.n(counters.registerBill);
-    if (withSales) {
-      [].concat.apply([], plan.groups.map(function (g) { return g.sales || []; }))
-        .sort(function (a, b) { return (a.date || '9999') < (b.date || '9999') ? -1 : (a.date || '9999') > (b.date || '9999') ? 1 : 0; })
-        .forEach(function (b) { b.invoiceNo = 'REG-' + App.pad(++billNo, 5); });
-    }
-    var rxOn = {};                                 /* customer|date -> prescription, to print on that day's bill */
-    App.db.prescriptions.forEach(function (p) { if (!p.deletedAt) rxOn[p.customerId + '|' + p.date] = p; });
-
-    return new Promise(function (resolve) {
-      var i = 0, res = { made: 0, updated: 0, rx: 0, sales: 0, salesValue: 0 };
-      function step() {
-        var end = Math.min(plan.groups.length, i + 250);
-        for (; i < end; i++) {
-          var g = plan.groups[i], recs = g.recs, first = recs[0];
-          var lines = [];
-          recs.forEach(function (rec) { rec.notes.forEach(function (l) { if (lines.indexOf(l) < 0) lines.push(l); }); });
-          var dates = [].concat.apply([], recs.map(function (x) { return x.dates; })).sort();
-          var c = g.existing;
-          if (!c) {
-            var others = recs.map(function (x) { return x.mobile; }).filter(function (m) { return m && m !== first.mobile; });
-            c = M.customerCreate({
-              name: first.name,
-              mobile: first.mobile,
-              altMobile: first.alt || others[0] || '',
-              address: first.address || (recs.map(function (x) { return x.address; }).filter(Boolean)[0] || ''),
-              notes: lines.join('\n'),
-              registeredOn: dates[0] || App.today()
-            });
-            res.made++;
-          } else {
-            var have = String(c.notes || '');
-            var add = lines.filter(function (l) { return have.split('\n').indexOf(l) < 0; });
-            if (add.length) {
-              c.notes = (have ? have + '\n' : '') + add.join('\n');
-              c.updatedAt = App.nowISO();
-              res.updated++;
-            }
-          }
-          g.rx.forEach(function (rx) {
-            var made = M.rxCreate({ customerId: c.id, date: rx.date || dates[dates.length - 1] || App.today(), od: rx.od, os: rx.os, notes: rx.notes });
-            rxOn[c.id + '|' + made.date] = made;
-            res.rx++;
-          });
-          if (withSales) (g.sales || []).forEach(function (b) {
-            var date = b.date || dates[dates.length - 1] || App.today();
-            var rx = rxOn[c.id + '|' + date] || null;
-            var sale = M.saleCreate({
-              invoiceNo: b.invoiceNo,
-              date: date,
-              customerId: c.id, customerName: c.name, customerMobile: c.mobile,
-              prescriptionId: rx ? rx.id : '', prescription: rx,
-              items: b.items.map(function (it) {
-                return { name: it.name, qty: 1, rate: it.amount, costPrice: 0, discount: 0, discountType: '₹' };
-              }),
-              billDiscount: b.discount, billDiscountType: '₹',
-              taxEnabled: false, roundOff: false,
-              payments: b.total > 0 ? [{ method: b.method || opts.method || 'Cash', amount: b.total }] : [],
-              noSave: true
-            });
-            sale.imported = 'register';
-            sale.importKey = b.key;
-            /* the shop's own shorthand, kept on the bill for reference (not printed for the customer) */
-            sale.registerText = b.raw.join(', ') + (b.notes.length ? ' · ' + b.notes.join(' · ') : '');
-            if (b.estimated && b.allDates.length > 1) sale.registerDates = b.allDates.map(dmy).join('/');
-            res.sales++;
-            res.salesValue += App.n(sale.total);
-          });
-        }
-        if (withSales) counters.registerBill = billNo;
-        App.store.touch();
-        if (onProgress) onProgress(i, plan.groups.length);
-        if (i < plan.groups.length) setTimeout(step, 0);
-        else resolve(res);
-      }
-      step();
-    });
-  };
-
-  /* ---------------- export in the register layout ---------------- */
-  function fmtEye(prefix, e) {
-    e = e || {};
-    var has = function (v) { return v !== '' && v !== null && v !== undefined && isFinite(parseFloat(v)); };
-    var sph = has(e.sph) ? App.n(e.sph) : null, cyl = has(e.cyl) ? App.n(e.cyl) : null;
-    if (sph === null && !cyl) return '';
-    if (cyl) return prefix + (sph ? sgn(sph) + '/' : '') + sgn(cyl) + (e.axis ? 'X' + e.axis : '');
-    return sph ? prefix + sgn(sph) : prefix + ' PLANO';
-  }
-  function fmtAdd(rx) {
-    var a = (rx.od || {}).add, b = (rx.os || {}).add;
-    a = a !== '' && a != null && isFinite(parseFloat(a)) ? sgn(App.n(a)) : '';
-    b = b !== '' && b != null && isFinite(parseFloat(b)) ? sgn(App.n(b)) : '';
-    if (a && b) return a === b ? 'ADD' + a + ' BE' : 'ADD' + a + 'RE/LE' + b;
-    if (a) return 'ADD' + a + ' RE';
-    if (b) return 'ADD' + b + ' LE';
-    return '';
-  }
-  function splitNotes(notes) {
-    var o = { visits: [], ref: [], remarks: [] };
-    String(notes || '').split(/\n+/).forEach(function (line) {
-      line = clean(line);
-      if (!line) return;
-      var m;
-      if ((m = /^Visit (.*?) — (.*)$/.exec(line))) o.visits.push({ dates: m[1], details: m[2] });
-      else if ((m = /^Visit (.*)$/.exec(line))) o.visits.push({ dates: m[1], details: '' });
-      else if ((m = /^Bought: (.*)$/.exec(line))) o.visits.push({ dates: '', details: m[1] });
-      else if ((m = /^Ref: (.*)$/.exec(line))) o.ref.push(m[1]);
-      else if ((m = /^(?:Remarks|Contact|More|Date|Eye): (.*)$/.exec(line))) o.remarks.push(m[1]);
-      else o.remarks.push(line);
-    });
-    return o;
-  }
-  /* one row per visit, oldest first — the register keeps repeat visits as their own rows,
-     so the whole prescription history survives an export and a re-import */
-  function registerRows(c) {
-    var rxs = M.customerRx(c.id).slice().sort(function (a, b) { return (a.date || '') > (b.date || '') ? 1 : -1; });
-    var parts = splitNotes(c.notes);
-    var sales = M.customerSales(c.id).filter(function (s) { return s.status !== 'cancelled' && s.imported !== 'register'; })
-      .sort(function (a, b) { return a.date > b.date ? 1 : -1; });
-    var bought = parts.visits.map(function (v) { return { dates: parseDates(v.dates), text: v.details, used: false }; })
-      .concat(sales.map(function (s) {
-        return { dates: [s.date], used: false,
-          text: s.items.map(function (it) { return up(it.name) + '.' + Math.round(App.n(it.amount)) + '/-'; }).join(' ') };
-      }));
-    var contact = [c.mobile, c.altMobile].filter(Boolean).join('/');
-    var remarks = parts.remarks.join(' / ');
-
-    function take(date) {                     /* what was bought on that visit */
-      var out = [];
-      bought.forEach(function (b) {
-        if (!b.used && date && b.dates.indexOf(date) >= 0) { b.used = true; if (b.text) out.push(b.text); }
-      });
-      return out;
-    }
-    function leftovers(details, dates) {      /* visits that have no prescription of their own */
-      bought.forEach(function (b) {
-        if (b.used) return;
-        b.used = true;
-        if (b.text) details.push(b.text);
-        b.dates.forEach(function (d) { if (dates.indexOf(d) < 0) dates.push(d); });
-      });
-    }
-
-    if (!rxs.length) {
-      var d0 = [], t0 = [];
-      leftovers(t0, d0);
-      return [[0, c.name, c.address, '', '', '', '', d0.sort().map(dmy).join('/'), t0.join(', '),
-        parts.ref.join(' / '), contact, remarks]];
-    }
-    return rxs.map(function (rx, i) {
-      var last = i === rxs.length - 1;
-      var dates = rx.date ? [rx.date] : [], details = take(rx.date);
-      if (last) leftovers(details, dates);
-      var vision = /(?:^|· )Vision ([^·]+)/.exec(rx.notes || '');
-      var ref = rx.doctor ? [/^DR\b/i.test(rx.doctor) ? rx.doctor : 'DR. ' + rx.doctor] : [];
-      if (last) ref = ref.concat(parts.ref);
-      return [0, c.name, c.address,
-        fmtEye('R', rx.od), fmtEye('L', rx.os), fmtAdd(rx),
-        vision ? clean(vision[1]) : '', dates.sort().map(dmy).join('/'), details.join(', '),
-        ref.join(' / '), contact, last ? remarks : ''];
-    });
-  }
-
+  /* ---------------- export ---------------- */
   X.exportRegister = function (list) {
-    list = list || M.customers();
-    var rows = [HEADINGS], n = 0;
-    list.forEach(function (c) {
-      registerRows(c).forEach(function (r) { r[0] = ++n; rows.push(r); });
-    });
+    list = list && list.length ? list : M.customers();
+    var rows = [['Customer ID', 'Name', 'Mobile', 'Alternate', 'Email', 'Address',
+      'Date of birth', 'Notes', 'Invoices', 'Total purchased', 'Total paid', 'Outstanding', 'Registered']];
+    list.slice().sort(function (a, b) { return App.norm(a.name) > App.norm(b.name) ? 1 : -1; })
+      .forEach(function (c) {
+        var st = M.customerStats(c.id);
+        rows.push([c.code || '', c.name || '', c.mobile || '', c.altMobile || '', c.email || '',
+          App.oneLine ? App.oneLine(c.address) : (c.address || '').replace(/\n/g, ' '), c.dob || '',
+          (c.notes || '').replace(/\n/g, ' '),
+          st.invoices, App.n(st.billed), App.n(st.paid), App.round2(st.outstanding),
+          c.registeredOn || App.dstr(c.createdAt)]);
+      });
     var ok = App.download('customers_' + App.today() + '.csv', '﻿' + App.toCSV(rows), 'text/csv');
-    if (ok !== false && !App.native()) App.toast('Exported ' + list.length + ' customers (' + n + ' visits)', 'ok');
+    if (ok !== false) App.toast(list.length + ' customer' + (list.length === 1 ? '' : 's') + ' exported', 'ok');
   };
 
-  /* ---------------- import screens ---------------- */
+  /* ---------------- import ---------------- */
+  /* find a column index by any of several header names */
+  function col(headers, names) {
+    for (var i = 0; i < headers.length; i++) {
+      var h = App.norm(headers[i]);
+      for (var j = 0; j < names.length; j++) if (h === App.norm(names[j])) return i;
+    }
+    return -1;
+  }
+
+  function readRows(rows) {
+    if (!rows || !rows.length) return { rows: [], err: 'The file is empty.' };
+    var headers = rows[0].map(function (x) { return String(x == null ? '' : x); });
+    var iName = col(headers, ['name', 'customer', 'customer name', 'full name']);
+    if (iName < 0) return { rows: [], err: 'Could not find a "Name" column. The first row should be the column headings.' };
+    var iMob = col(headers, ['mobile', 'phone', 'mobile number', 'phone number', 'contact', 'contact no.', 'contact number']);
+    var iAlt = col(headers, ['alternate', 'alternate number', 'alt', 'alt mobile', 'other number']);
+    var iEmail = col(headers, ['email', 'e-mail', 'email id']);
+    var iAddr = col(headers, ['address', 'addr']);
+    var iDob = col(headers, ['date of birth', 'dob', 'birthday']);
+    var iNotes = col(headers, ['notes', 'note', 'remarks']);
+    var iCode = col(headers, ['customer id', 'id', 'code', 'customer code']);
+    var get = function (r, i) { return i >= 0 && i < r.length ? String(r[i] == null ? '' : r[i]).trim() : ''; };
+
+    var out = [];
+    for (var k = 1; k < rows.length; k++) {
+      var r = rows[k];
+      if (!r || !r.length) continue;
+      var name = get(r, iName);
+      if (!name) continue;
+      out.push({
+        name: name, mobile: get(r, iMob), altMobile: get(r, iAlt), email: get(r, iEmail),
+        address: get(r, iAddr), dob: get(r, iDob), notes: get(r, iNotes), code: get(r, iCode)
+      });
+    }
+    return { rows: out };
+  }
+
+  /* a customer already on file? match on mobile first, then exact name */
+  function existing(rec) {
+    var all = M.customers();
+    if (rec.mobile) {
+      var mob = rec.mobile.replace(/\D/g, '');
+      if (mob) {
+        var byMob = all.filter(function (c) { return c.mobile && c.mobile.replace(/\D/g, '') === mob; });
+        if (byMob.length) return byMob[0];
+      }
+    }
+    var nm = App.norm(rec.name);
+    var byName = all.filter(function (c) { return App.norm(c.name) === nm; });
+    return byName.length ? byName[0] : null;
+  }
+
   X.importDialog = function () {
-    var ex = ['', 'RAHUL SHARMA', '12, RANI BAGH', 'R-2.00/-0.50X90', 'L-1.75', 'ADD+2.00 BE', 'BE 6/6', '2.7.2025/23.7.2026',
-              'FR.600/- BLUECUT.850/-', 'DR. MEHTA', '9876543210', 'OK'];
-    var what = ['S.No (not used)', 'Name', 'Address', 'Right eye', 'Left eye', 'ADD', 'Vision', 'Date(s)', 'Details', 'Ref.', 'Contact no.', 'Remarks'];
-    var m = UI.modal({
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,text/csv,text/plain';
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () { preview(String(reader.result || '')); };
+      reader.onerror = function () { App.toast('Could not read that file', 'err'); };
+      reader.readAsText(file);
+    });
+    input.click();
+  };
+
+  function preview(text) {
+    var parsed;
+    try { parsed = App.parseCSV(text); } catch (e) { App.toast('That does not look like a CSV file', 'err'); return; }
+    var res = readRows(parsed);
+    if (res.err) { UI.modal({ title: 'Import customers', size: 'narrow', body: '<div class="sm">' + App.esc(res.err) + '</div>' }); return; }
+    var recs = res.rows;
+    if (!recs.length) { UI.modal({ title: 'Import customers', size: 'narrow', body: '<div class="sm">No customer rows were found in the file.</div>' }); return; }
+
+    var toAdd = [], dupes = 0;
+    recs.forEach(function (rec) { if (existing(rec)) dupes++; else toAdd.push(rec); });
+
+    var sample = toAdd.slice(0, 8).map(function (r) {
+      return '<tr><td>' + App.esc(r.name) + '</td><td class="mono">' + App.esc(r.mobile || '—') + '</td>' +
+        '<td class="sm dim">' + App.esc(App.oneLine ? App.oneLine(r.address) : r.address) + '</td></tr>';
+    }).join('');
+
+    var body =
+      '<div class="sm mb12">Found <b>' + recs.length + '</b> row' + (recs.length === 1 ? '' : 's') + '. ' +
+        '<b>' + toAdd.length + '</b> new customer' + (toAdd.length === 1 ? '' : 's') + ' will be added' +
+        (dupes ? ', <b>' + dupes + '</b> already on file (skipped)' : '') + '.</div>' +
+      (toAdd.length
+        ? '<div class="tablewrap" style="max-height:260px;overflow:auto"><table class="tbl"><thead><tr>' +
+            '<th>Name</th><th>Mobile</th><th>Address</th></tr></thead><tbody>' + sample +
+            (toAdd.length > 8 ? '<tr><td colspan="3" class="sm dim">…and ' + (toAdd.length - 8) + ' more</td></tr>' : '') +
+            '</tbody></table></div>'
+        : '<div class="sm muted">Nothing new to add — every row matches a customer you already have.</div>');
+
+    UI.modal({
       title: 'Import customers',
       size: 'wide',
-      body:
-        '<p class="sm muted" style="margin:0 0 12px">Choose your register file — Excel (.xls, .xlsx) or CSV — laid out like this. Row 1 can hold the headings.</p>' +
-        '<div class="tablewrap"><table class="tbl csv-cols"><thead><tr>' +
-          'ABCDEFGHIJKL'.split('').map(function (l) { return '<th>' + l + '</th>'; }).join('') + '</tr></thead><tbody>' +
-          '<tr>' + what.map(function (w) { return '<td class="b">' + w + '</td>'; }).join('') + '</tr>' +
-          '<tr>' + ex.map(function (w) { return '<td class="mono dim">' + App.esc(w) + '</td>'; }).join('') + '</tr>' +
-        '</tbody></table></div>' +
-        '<div class="banner mt12">' + App.icon('info', 20) + '<div class="tx">Excel files open straight away' +
-          '<small>The app reads the first sheet that has your customer rows. If a file will not open, save it as CSV in WPS or Excel and choose that.</small></div></div>' +
-        '<div class="flex gap8 aic mt16 wrap"><button type="button" class="btn btn-primary btn-lg" id="cimpick">' + App.icon('file', 19) +
-          '<span>Choose file</span></button><span class="sm" id="cimstatus" role="status"></span></div>' +
-        '<input type="file" id="cimfile" hidden' + (App.native() ? '' :
-          ' accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"') + '>',
-      buttons: [{ label: 'Close', onClick: function (a) { a.close(); } }]
-    });
-    var input = App.el('#cimfile', m.el), status = App.el('#cimstatus', m.el);
-    App.el('#cimpick', m.el).addEventListener('click', function () { input.value = ''; input.click(); });
-    input.addEventListener('change', function () {
-      var f = input.files && input.files[0];
-      if (!f) return;
-      status.className = 'sm';
-      status.textContent = 'Reading ' + f.name + '…';
-      var fr = new FileReader();
-      fr.onerror = function () { status.className = 'sm neg b'; status.textContent = 'Could not read this file.'; };
-      function fail(msg) { status.className = 'sm neg b'; status.textContent = msg; }
-      function show(rows) {
-        var plan;
-        try { plan = X.plan(rows); }
-        catch (e) { return fail('This file could not be read (' + e.message + ').'); }
-        if (!plan.groups.length) return fail('No customers found in this file. Is the name in column B?');
-        m.close();
-        previewDialog(plan, f.name);
-      }
-      fr.onload = function () {
-        var bytes = new Uint8Array(fr.result);
-        if (App.Spreadsheet.kindOf(bytes)) {                     /* .xls or .xlsx */
-          status.textContent = 'Opening the Excel file…';
-          App.Spreadsheet.read(fr.result).then(show, function (e) {
-            fail((e && e.message) || 'This Excel file could not be opened. Save it as CSV and try again.');
-          });
-          return;
-        }
-        var text;
-        try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
-        catch (e) { text = new TextDecoder('windows-1252').decode(bytes); }
-        setTimeout(function () { show(App.parseCSV(text)); }, 30);
-      };
-      fr.readAsArrayBuffer(f);
-    });
-  };
-
-  function stat(n, label) {
-    return '<div class="imp-stat"><b class="num">' + Number(n).toLocaleString('en-IN') + '</b><span>' + label + '</span></div>';
-  }
-
-  function previewDialog(plan, fileName) {
-    var nothing = !plan.newCustomers && !plan.rxToAdd && !plan.salesToAdd;
-    var billSample = plan.salesSample.map(function (x) {
-      var b = x.bill;
-      return '<tr><td><div class="b">' + App.esc(x.name) + '</div><div class="tiny dim">' + (b.date ? App.fmtDate(b.date) : 'no date') + '</div></td>' +
-        '<td>' + b.items.map(function (it) {
-          return '<div class="flex jcb gap12"><span>' + App.esc(it.name) + '</span><span class="num">' + App.money(it.amount) + '</span></div>';
-        }).join('') + '</td>' +
-        '<td class="num right b">' + App.money(b.total) + '</td>' +
-        '<td class="tiny mono dim">' + App.esc(b.raw.join(', ')) + '</td></tr>';
-    }).join('');
-    var sample = plan.sample.map(function (g) {
-      var rec = g.recs[g.recs.length - 1], rx = g.rx[g.rx.length - 1];
-      return '<tr><td><div class="b">' + App.esc(rec.name) + '</div>' +
-          (g.recs.length > 1 ? '<div class="tiny dim">' + g.recs.length + ' visits</div>' : '') +
-          (g.existing ? '<div class="tiny dim">already in the app</div>' : '') + '</td>' +
-        '<td class="mono">' + App.esc(rec.mobile || '—') + '</td>' +
-        '<td class="mono">' + App.esc(rx ? fmtEye('R', rx.od) || '—' : '—') + '</td>' +
-        '<td class="mono">' + App.esc(rx ? fmtEye('L', rx.os) || '—' : '—') + '</td>' +
-        '<td class="mono">' + App.esc(rx ? fmtAdd(rx) || '—' : '—') + '</td>' +
-        '<td class="sm">' + (rec.dates.length ? App.fmtDate(rec.dates[rec.dates.length - 1]) : '—') + '</td></tr>';
-    }).join('');
-
-    var m = UI.modal({
-      title: 'Import ' + fileName,
-      size: 'wide',
-      dismissable: false,
-      body:
-        '<div class="imp-sum">' +
-          stat(plan.total, 'rows in the file') + stat(plan.newCustomers, 'new customers') +
-          stat(plan.rxToAdd, 'eye prescriptions') + (plan.known ? stat(plan.known, 'already in the app') : '') +
-        '</div>' +
-        '<ul class="imp-notes sm muted">' +
-          (plan.header ? '<li>Row 1 has the headings, so it is not imported.</li>' : '') +
-          (plan.joined ? '<li>' + plan.joined.toLocaleString('en-IN') + ' rows are repeat visits of the same person (same name and mobile). ' +
-            'They are added to that customer as extra prescriptions.</li>' : '') +
-          (plan.known ? '<li>Customers already in the app are not added again — only prescriptions they don\'t have yet.</li>' : '') +
-          (plan.skipped ? '<li>' + plan.skipped + ' rows have no name and are skipped.</li>' : '') +
-          '<li>Details, Ref. and Remarks are kept in each customer\'s notes.</li>' +
-        '</ul>' +
-        '<div class="tiny b muted mt16 mb8">FIRST CUSTOMERS — CHECK THEY LOOK RIGHT</div>' +
-        '<div class="tablewrap"><table class="tbl"><thead><tr><th>Name</th><th>Mobile</th><th>Right eye</th><th>Left eye</th><th>ADD</th><th>Last visit</th></tr></thead>' +
-          '<tbody>' + sample + '</tbody></table></div>' +
-        (plan.salesToAdd
-          ? '<div class="imp-bills mt16">' +
-              '<div class="flex aic jcb wrap gap8"><div class="b">' + App.icon('receipt', 18) + ' Bills from the DETAILS column</div>' +
-                '<label class="switch"><input type="checkbox" id="cimsales" checked><span class="track"></span><span class="lb">Add them to Sales</span></label></div>' +
-              '<div class="imp-sum mt8">' + stat(plan.salesToAdd, 'bills') + stat(plan.salesItems, 'items') +
-                '<div class="imp-stat"><b class="num">' + App.money0(plan.salesValue) + '</b><span>total value</span></div></div>' +
-              '<ul class="imp-notes sm muted">' +
-                '<li>Each visit becomes a bill on its date, numbered <b>REG-00001</b> onwards (oldest first) so they never mix with your own invoice numbers.</li>' +
-                '<li>Shorthand is written out: FR → Frame, CRHC → CR-39 Hard Coat Lenses, BCT → Blue Cut Lenses. The original writing is kept on each bill.</li>' +
-                '<li>Stock is not changed — these are past sales. The bill shows the prescription from the same day when there is one.</li>' +
-                (plan.salesEstimated ? '<li>' + plan.salesEstimated.toLocaleString('en-IN') + ' bills are on rows where the dates and purchases don\'t line up one-to-one; the app puts the newest writing on the newest date and notes all the register dates on the bill.</li>' : '') +
-              '</ul>' +
-              '<div class="row mt8" style="grid-template-columns:minmax(0,260px)"><div class="f"><label for="cimpay">Paid by (when the register does not say)</label>' +
-                '<select id="cimpay">' + ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Other'].map(function (mth) {
-                  return '<option>' + mth + '</option>'; }).join('') + '</select></div></div>' +
-              (billSample ? '<div class="tiny b muted mt12 mb8">SOME OF THE BILLS — CHECK THEY LOOK RIGHT</div>' +
-                '<div class="tablewrap"><table class="tbl"><thead><tr><th>Customer</th><th>Items</th><th class="right">Total</th><th>Written in the register</th></tr></thead>' +
-                '<tbody>' + billSample + '</tbody></table></div>' : '') +
-            '</div>'
-          : '') +
-        '<div class="banner mt16">' + App.icon('shield', 20) + '<div class="tx">Your data is backed up first' +
-          '<small>A copy of everything is saved in Backup &amp; Restore before the import starts.</small></div></div>' +
-        '<div class="sm b mt12" id="cimprog" role="status" hidden></div>',
+      body: body,
       buttons: [
-        { label: 'Cancel', onClick: function (a) { a.close(); } },
-        { label: 'Choose another file', onClick: function (a) { a.close(); X.importDialog(); } },
-        { label: nothing ? 'Nothing new to import' : 'Import ' + [
-            plan.newCustomers ? plan.newCustomers.toLocaleString('en-IN') + ' customers' : (plan.rxToAdd ? plan.rxToAdd.toLocaleString('en-IN') + ' prescriptions' : ''),
-            plan.salesToAdd ? plan.salesToAdd.toLocaleString('en-IN') + ' bills' : ''
-          ].filter(Boolean).join(' and '),
-          class: 'btn-primary', icon: 'check', onClick: function (a) { if (!nothing) run(a, plan); } }
-      ]
-    });
-    if (nothing) App.el('.modal-foot .btn-primary', m.el).disabled = true;
-  }
-
-  function run(a, plan) {
-    var buttons = App.els('.modal-foot button', a.el);
-    buttons.forEach(function (b) { b.disabled = true; });
-    var prog = App.el('#cimprog', a.el);
-    prog.hidden = false;
-    prog.textContent = 'Saving a backup copy first…';
-    var salesBox = App.el('#cimsales', a.el), payBox = App.el('#cimpay', a.el);
-    var opts = { withSales: salesBox ? salesBox.checked : false, method: payBox ? payBox.value : 'Cash' };
-    App.Backup.addToVault(false, 'Before customer import').then(function () {
-      return X.apply(plan, function (done, total) {
-        prog.textContent = 'Importing… ' + Math.round(done * 100 / Math.max(1, total)) + '%';
-      }, opts);
-    }, function (e) {
-      buttons.forEach(function (b) { b.disabled = false; });
-      prog.className = 'sm b mt12 neg';
-      prog.textContent = 'Could not save the backup copy, so nothing was imported. (' + (e && e.message ? e.message : e) + ')';
-      return null;
-    }).then(function (res) {
-      if (!res) return;
-      return App.store.saveNow().then(function () {
-        a.close();
-        App.toast('Imported ' + res.made.toLocaleString('en-IN') + ' customers, ' + res.rx.toLocaleString('en-IN') + ' prescriptions' +
-          (res.sales ? ' and ' + res.sales.toLocaleString('en-IN') + ' bills' : ''), 'ok', 7000);
-        UI.go('/customers');
-      });
+        { label: 'Cancel', onClick: function (a) { a.close(); } }
+      ].concat(toAdd.length ? [{
+        label: 'Add ' + toAdd.length + ' customer' + (toAdd.length === 1 ? '' : 's'),
+        class: 'btn-primary',
+        onClick: function (a) {
+          toAdd.forEach(function (rec) {
+            M.customerCreate({
+              name: rec.name, mobile: rec.mobile, altMobile: rec.altMobile, email: rec.email,
+              address: rec.address, dob: rec.dob, notes: rec.notes
+              /* the Customer ID is always generated fresh so imports never clash */
+            });
+          });
+          App.store.saveNow();
+          a.close();
+          App.toast(toAdd.length + ' customer' + (toAdd.length === 1 ? '' : 's') + ' added', 'ok');
+          UI.render();
+        }
+      }] : [])
     });
   }
-
-  /* exposed for checks */
-  X._parse = { eye: parseEye, add: parseAdd, dates: parseDates, phones: phones, fmtEye: fmtEye, fmtAdd: fmtAdd, row: readRow, nameKey: nameKey };
 })();
 
 
@@ -7569,317 +7047,6 @@ Minimum version required to store current data is: `+i+`.
 })();
 
 
-/* ===== 41d-register-sales.js ===== */
-/* =========================================================================
-   41d-register-sales.js — bills from the DETAILS column of the shop register
-   The register writes what was bought in shorthand, one group per visit:
-     "FR(J7).450/- BLUECUT.600/-, FR.600/- CRHC.200/-"   with dates "7.8.2022/14.5.2023"
-   This turns each visit into a bill with proper product names and amounts.
-   The original text always goes onto the bill too, so nothing is ever lost.
-   ========================================================================= */
-(function () {
-  'use strict';
-  var RS = {};
-  App.RegisterSales = RS;
-
-  function clean(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
-
-  /* ---------------- proper product names ---------------- */
-
-  /* shorthand written as one word, split into its parts */
-  var JOINED = [
-    [/^CR(HC|KT|ARC|BCT|COLOU?R|UNCOAT)$/, 'CR $1'],
-    [/^PG(HC|KT|ARC|BCT|BLUECUT|CRKT|CRHC|GLASS|DUOLCOAT)$/, 'PG $1'],
-    [/^WT(KT|GLASS|HC)$/, 'WT $1'],
-    [/^(HC|BCT|KT|ARC|BLUECUT)(NV|DV|KT|PROG)$/, '$1 $2'],
-    [/^POLY(ARC|HC|BCT|BLUECUT)$/, 'POLY $1'],
-    [/^(DUOL|DUAL)COAT$/, 'DUAL COAT'],
-    [/^DUOL$/, 'DUAL'],
-    [/^BLUECUT$/, 'BLUE CUT'],
-    [/^I-?CONNECT$/, 'I CONNECT'],
-    [/^MARIBLUE$/, 'MARI BLUE'],
-    [/^BIOTRUE$/, 'BIO TRUE'],
-    [/^EYECONIC$/, 'EYE CONIC'],
-    [/^GOGGS?$|^GOGGLES?$/, 'GOGGLES'],
-    [/^SUNGLASS(ES)?$/, 'SUNGLASSES'],
-    [/^RADIATOR$/, 'RAD']
-  ];
-
-  /* one shorthand word -> words people read. `lens` marks lens types, so "Lenses" can be added */
-  var WORD = {
-    FR: 'Frame', FRAME: 'Frame', FRAMES: 'Frame',
-    CR: { t: 'CR-39', lens: 1 }, HC: { t: 'Hard Coat', lens: 1 }, KT: { t: 'Kryptok Bifocal', lens: 1 },
-    ARC: { t: 'Anti-Reflection', lens: 1 }, BCT: { t: 'Blue Cut', lens: 1 }, RAD: { t: 'Anti-Radiation', lens: 1 },
-    PG: { t: 'Photogrey', lens: 1 }, WT: { t: 'White', lens: 1 }, GLASS: { t: 'Glass', lens: 1 },
-    POLY: { t: 'Polycarbonate', lens: 1 }, MR8: { t: 'MR-8', lens: 1 }, COLOR: { t: 'Tinted', lens: 1 }, COLOUR: { t: 'Tinted', lens: 1 },
-    UNCOAT: { t: 'Uncoated', lens: 1 }, PROG: { t: 'Progressive', lens: 1 }, PROGRESSIVE: { t: 'Progressive', lens: 1 },
-    BIFOCAL: { t: 'Bifocal', lens: 1 }, LENS: { t: 'Lens', lens: 2 }, LENSES: { t: 'Lenses', lens: 2 },
-    SUNGLASSES: 'Sunglasses', GOGGLES: 'Goggles', READING: 'Reading Glasses',
-    NV: '(Near Vision)', DV: '(Distance Vision)', RE: '(Right Eye)', LE: '(Left Eye)', BE: '(Both Eyes)',
-    MPS: 'Contact Lens Solution', SOLUTION: 'Solution', STICKS: 'Temple Sticks', BOX: 'Box', CHAIN: 'Chain',
-    READY: '(Ready-made)', TESTING: 'Eye Test', N: 'and', WITH: 'with', AND: 'and', OF: 'of', FOR: 'for'
-  };
-  var TWO = { 'BLUE CUT': { t: 'Blue Cut', lens: 1 }, 'DUAL COAT': { t: 'Dual Coat', lens: 1 }, 'EYE TEST': 'Eye Test',
-    'BI FOCAL': { t: 'Bifocal', lens: 1 }, 'CONTACT LENS': 'Contact Lens', 'EYE CONIC': 'Eyeconic' };
-
-  /* brands seen in the register, so a bare brand still reads as the right kind of product */
-  var LENS_BRANDS = /^(EYECONIC|EYE CONIC|MARI BLUE|CRIZAL|ZEISS|MAJESTIC|ORACLE|PRIME|CORNING|ELECTRA|RIO|TRIO|AURA|PREVENCIA|TRANSPERRA|RETIKAL|ESSILOR|HOYA|KODAK|VARILUX|SYNCHRONY|DURAVISION)\b/;
-  var CONTACT_BRANDS = /^(I CONNECT|NETRA|SILKLENS|BIOMEDICS|FRESHLOOK|FRESH LOOK|ORNATE|AQUALENS|ANNIELUX|BIO TRUE|AIR OPTIX|ALCON|ACUVUE|EYE TOUCH|SOFLENS|PUREVISION|DAILIES|OPTIMA|CELEBRATION)\b/;
-  var SOLUTION_BRANDS = /^(RINSOL|MULTISOL|RENU|OPTI ?FREE|AQUASOFT|BLINK)\b/;
-  var FRAME_BRANDS = /^(PARX|VOYAGE|RAY ?BAN|PRADA|OAKLEY|VERSACE|GUCCI|FASTRACK|TITAN|SCOTT|BOSS|VINCENT CHASE|JOHN JACOBS|CARRERA|POLICE|IDEE|FOGG|HI FLY|HIGH FLY)\b/;
-
-  function titleWord(w) {
-    if (/\d/.test(w)) return w;                            /* model codes stay as written: J7, P1850, SL59 */
-    if (w.length <= 2) return w;                           /* short marks like UV, OG */
-    return w.charAt(0) + w.slice(1).toLowerCase();
-  }
-
-  /* "FR(J7)" -> "Frame (J7)", "CRHC NV" -> "CR-39 Hard Coat Lenses (Near Vision)" */
-  RS.productName = function (raw) {
-    var text = clean(raw).toUpperCase();
-    if (!text) return '';
-    var details = [];
-    text = text.replace(/\(([^()]*)\)/g, function (m, inner) { if (clean(inner)) details.push(clean(inner)); return ' '; })
-      .replace(/[()]/g, ' ');
-    var times = '';
-    text = text.replace(/\bX\s?(\d)\b/g, function (m, n) { times = ' ×' + n; return ' '; });
-    var words = text.split(/[\s.=:;*"]+|(?=\/)(?!\/-)/).map(function (w) { return w.replace(/^[-\/,]+|[-\/,]+$/g, ''); }).filter(Boolean);
-    words = [].concat.apply([], words.map(function (w) {
-      for (var i = 0; i < JOINED.length; i++) if (JOINED[i][0].test(w)) return w.replace(JOINED[i][0], JOINED[i][1]).split(' ');
-      return [w];
-    }));
-    words = [].concat.apply([], words.map(function (w) {           /* CR HC / PG KT may need one more split */
-      for (var i = 0; i < JOINED.length; i++) if (JOINED[i][0].test(w) && w.replace(JOINED[i][0], JOINED[i][1]) !== w) return w.replace(JOINED[i][0], JOINED[i][1]).split(' ');
-      return [w];
-    }));
-
-    var out = [], trail = [], isLens = false, hasLensWord = false, hasFrame = false;
-    for (var i = 0; i < words.length; i++) {
-      var two = words[i] + ' ' + (words[i + 1] || ''), hit = TWO[two] || WORD[words[i]];
-      if (TWO[two]) i++;
-      if (!hit) { out.push(titleWord(words[i])); continue; }
-      var t = typeof hit === 'string' ? hit : hit.t;
-      if (hit.lens === 1) isLens = true;
-      if (hit.lens === 2) hasLensWord = true;
-      if (t === 'Frame') hasFrame = true;
-      if (t.charAt(0) === '(') trail.push(t.slice(1, -1)); else out.push(t);
-    }
-    /* "PARX FR" -> "Frame Parx" */
-    if (hasFrame && out[0] !== 'Frame') { out = out.filter(function (w) { return w !== 'Frame'; }); out.unshift('Frame'); }
-    var name = out.join(' ');
-    var upperName = words.join(' ');
-    var kindKnown = hasFrame || hasLensWord || /Glasses|Sunglasses|Goggles|Solution|Eye Test|Contact/.test(name);
-    if (!kindKnown && CONTACT_BRANDS.test(upperName)) { name += ' Contact Lenses'; kindKnown = true; }
-    else if (!kindKnown && SOLUTION_BRANDS.test(upperName)) { name += ' Solution'; kindKnown = true; }
-    else if (!kindKnown && FRAME_BRANDS.test(upperName)) { name = 'Frame ' + name; kindKnown = true; }
-    else if (!kindKnown && LENS_BRANDS.test(upperName)) { name += ' Lenses'; kindKnown = true; }
-    if (isLens && !kindKnown) name += ' Lenses';
-    var MARK = { NV: 'Near Vision', DV: 'Distance Vision', RE: 'Right Eye', LE: 'Left Eye', BE: 'Both Eyes', EACH: 'each', MRP: 'MRP' };
-    details = details.map(function (d) {
-      return d.split(' ').map(function (w) { return MARK[w] || titleWord(w); }).join(' ');
-    }).concat(trail);
-    if (details.length) name += ' (' + details.join(', ') + ')';
-    return (name + times).replace(/\s+/g, ' ').trim() || clean(raw);
-  };
-
-  /* ---------------- one written group -> items ---------------- */
-  var DATE_IN = /(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4}|\d{2})(?!\d)/;
-
-  function isoOf(m) {
-    var d = +m[1], mo = +m[2], y = +m[3];
-    if (y < 100) y += 2000;
-    if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 1990 || y > 2100) return '';
-    return y + '-' + (mo < 10 ? '0' : '') + mo + '-' + (d < 10 ? '0' : '') + d;
-  }
-
-  /* every price written in a group: "450/-", "450/", ".1000" (not the ".50" of "1.50") */
-  function prices(text, inside) {
-    var depth = [], dp = 0;
-    for (var ci = 0; ci < text.length; ci++) {
-      var ch = text.charAt(ci);
-      if (ch === '(' || ch === '{' || ch === '[') dp++;
-      depth.push(dp);
-      if ((ch === ')' || ch === '}' || ch === ']') && dp > 0) dp--;
-    }
-    var out = [], re = /(\d{1,3}(?:,\d{3})+|\d{2,6})\s*\/\s*-?|\.\s?(\d{3,5})(?![\d\/.,])/g, m;
-    while ((m = re.exec(text))) {
-      if (!inside && depth[m.index] > 0) continue;          /* "FR(DK14-2000/-).1500/-": the bracket holds the list price */
-      if (m[2] !== undefined) {
-        var before = text.slice(0, m.index).match(/(\S+)$/);
-        if (before && /^\d+$/.test(before[1])) continue;    /* 1.50 lens index, not a price */
-      }
-      out.push({ start: m.index, end: m.index + m[0].length, amount: parseInt(String(m[1] || m[2]).replace(/,/g, ''), 10) });
-    }
-    return out;
-  }
-
-  RS.parseGroup = function (raw) {
-    var text = clean(raw), date = '';
-    var dm = DATE_IN.exec(text);
-    if (dm && isoOf(dm)) {
-      date = isoOf(dm);
-      text = clean(text.replace(dm[0], ' ').replace(/^[\s()\[\]{}.,]+/, '').replace(/^\)|\($/g, ''));
-    }
-    var ps = prices(text), items = [], pos = 0, discount = 0, notes = [];
-    ps.forEach(function (p) {
-      var seg = text.slice(pos, p.start);
-      /* what follows the previous price in brackets, or a "X2", belongs to the previous item */
-      var lead;
-      while ((lead = /^\s*(\([^)]*\)|X\s?\d\b|\(?EACH\)?)/i.exec(seg)) && items.length) {
-        items[items.length - 1].raw += ' ' + lead[1];
-        seg = seg.slice(lead[0].length);
-      }
-      seg = clean(seg.replace(/^[\s.,\-\/=+]+|[\s.,\-=]+$/g, '').replace(/\s*\bRS\.?$/i, ''));
-      var money = /^(TOTAL|ADV|ADVANCE|BAL|BALANCE|DUE|PAID|RECEIVED|PENDING|MRP|LESS|DISC|DISCOUNT)\b/i.exec(seg);
-      if (money) {
-        var word = money[1].toUpperCase();
-        if (/^(LESS|DISC|DISCOUNT)$/.test(word)) discount += p.amount;
-        else if (word === 'MRP' && items.length) items[items.length - 1].raw += ' (MRP ' + p.amount + ')';
-        else notes.push({ TOTAL: 'Total written', ADV: 'Advance', ADVANCE: 'Advance', BAL: 'Balance', BALANCE: 'Balance',
-          DUE: 'Due', PAID: 'Paid', RECEIVED: 'Received', PENDING: 'Pending', MRP: 'MRP' }[word] + ' ₹' + p.amount);
-        pos = p.end;
-        return;
-      }
-      var free = /(.*?)\bFREE\b(.*)/i.exec(seg);
-      if (free && clean(free[1])) { items.push({ raw: clean(free[1]), amount: 0, free: true }); seg = clean(free[2]); }
-      if (!seg && items.length && !items[items.length - 1].free) {
-        items[items.length - 1].amount += p.amount;      /* "FR.250/- 50/-": an added charge on the same item */
-      } else {
-        items.push({ raw: seg || 'Unnamed item', amount: p.amount });
-      }
-      pos = p.end;
-    });
-    var rest = clean(text.slice(pos).replace(/^[\s.,\-\/=]+/, ''));
-    var note = '';
-    if (rest) {
-      var fr = /(.*?)\bFREE\b/i.exec(rest);
-      if (fr && clean(fr[1])) items.push({ raw: clean(fr[1]), amount: 0, free: true });
-      else if (items.length && (/^\(.*\)$/.test(rest) || rest.split(' ').length <= 3)) items[items.length - 1].raw += ' ' + rest;
-      else if (!items.length && /^(EYE\s*TEST|TESTING)/i.test(rest)) items.push({ raw: 'EYE TEST', amount: 0 });
-      else note = rest;
-    }
-    items.forEach(function (it) {
-      it.name = /^Unnamed item$/.test(it.raw) ? 'Unnamed item' : RS.productName(it.raw) + (it.free ? ' (free)' : '');
-    });
-    if (note) notes.push(note);
-    return { items: items, date: date, note: notes.join(' · '), discount: discount, raw: clean(raw) };
-  };
-
-  /* ---------------- a register row -> visits with bills ---------------- */
-
-  /* commas split visits, except inside brackets; a bracket holding its own date is its own visit */
-  function splitGroups(details) {
-    var groups = [], depth = 0, cur = '';
-    String(details || '').split('').forEach(function (ch) {
-      if (ch === '(') depth++;
-      if (ch === ')') depth = Math.max(0, depth - 1);
-      if (ch === ',' && depth === 0) { groups.push(cur); cur = ''; } else cur += ch;
-    });
-    groups.push(cur);
-    var out = [];
-    groups.map(clean).filter(Boolean).forEach(function (g) {
-      g = g.replace(/\(([^()]*)\)/g, function (m, inner) {
-        if (DATE_IN.test(inner) && prices(inner).length) { out.push(inner); return ' '; }
-        return m;
-      });
-      g = clean(g);
-      if (!g) return;
-      var dm = DATE_IN.exec(g);
-      if (dm && dm.index > 0 && prices(g.slice(0, dm.index)).length && isoOf(dm)) {
-        out.push(clean(g.slice(0, dm.index).replace(/[(\[{\s]+$/, '')));
-        out.push(clean(g.slice(dm.index)));
-      } else {
-        out.push(g);
-      }
-    });
-    return out;
-  }
-
-  /* split a group again where a new frame starts — "FR.350/- CRHC.180/- FR.300/- CRHC.200/-" is two visits */
-  function frameSplit(group) {
-    var parts = [], cur = { items: [], note: '' };
-    group.items.forEach(function (it, i) {
-      if (i > 0 && /^(Frame|Sunglasses|Goggles)\b/.test(it.name) && cur.items.length) {
-        parts.push(cur); cur = { items: [], note: '' };
-      }
-      cur.items.push(it);
-    });
-    parts.push(cur);
-    return parts.map(function (p, i) {
-      return { items: p.items, date: '', note: i === parts.length - 1 ? group.note : '', discount: i === parts.length - 1 ? group.discount : 0, raw: group.raw };
-    });
-  }
-
-  RS.method = function (remarks, fallback) {
-    var t = String(remarks || '').toUpperCase();
-    if (/\bCARD\b/.test(t)) return 'Card';
-    if (/\b(UPI|PAYTM|GPAY|G PAY|PHONE ?PE|BHIM)\b/.test(t)) return 'UPI';
-    return fallback || 'Cash';
-  };
-
-  /* dates: the row's visit dates (sorted). Returns one entry per bill. */
-  RS.visits = function (details, dates) {
-    dates = (dates || []).slice().sort();
-    var groups = splitGroups(details).map(RS.parseGroup);
-    /* a group with nothing priced that is not a dated visit joins the next one ("FR, WITH GLASSES.800/-") */
-    for (var gi = groups.length - 2; gi >= 0; gi--) {
-      if (!groups[gi].items.length && !groups[gi].date) {
-        var joined = RS.parseGroup(groups[gi].raw + ' ' + groups[gi + 1].raw);
-        if (joined.items.length) groups.splice(gi, 2, joined);
-      }
-    }
-    var dated = groups.filter(function (g) { return g.date; });
-    var undated = groups.filter(function (g) { return !g.date; });
-    var free = dates.filter(function (d) { return !dated.some(function (g) { return g.date === d; }); });
-
-    var paired = [], estimated = false;
-    if (!free.length) {
-      if (undated.length) { estimated = !dates.length; undated.forEach(function (g) { g.date = dates[dates.length - 1] || ''; paired.push(g); }); }
-    } else if (undated.length === free.length) {
-      undated.forEach(function (g, i) { g.date = free[i]; paired.push(g); });
-    } else {
-      var split = [].concat.apply([], undated.map(frameSplit));
-      if (split.length === free.length) {
-        split.forEach(function (g, i) { g.date = free[i]; paired.push(g); });
-      } else if (free.length === 1) {
-        undated.forEach(function (g) { g.date = free[0]; paired.push(g); });
-      } else {
-        /* cannot tell exactly which visit bought what: newest writing goes with the newest date */
-        estimated = true;
-        var parts = split.length <= free.length ? split : undated;
-        for (var k = parts.length - 1, j = free.length - 1; k >= 0; k--, j--) {
-          parts[k].date = free[Math.max(0, j)];
-          paired.push(parts[k]);
-        }
-        paired.reverse();
-      }
-    }
-    var all = dated.concat(paired).filter(function (g) { return g.items.some(function (it) { return it.amount > 0; }); });
-
-    /* one bill per date */
-    var byDate = {}, order = [];
-    all.forEach(function (g) {
-      var key = g.date || '';
-      if (!byDate[key]) { byDate[key] = { date: key, items: [], notes: [], raw: [], discount: 0 }; order.push(key); }
-      var b = byDate[key];
-      b.items = b.items.concat(g.items);
-      b.discount += g.discount || 0;
-      if (g.note) b.notes.push(g.note);
-      if (b.raw.indexOf(g.raw) < 0) b.raw.push(g.raw);
-    });
-    return order.map(function (k) {
-      var b = byDate[k];
-      b.subtotal = b.items.reduce(function (s, it) { return s + it.amount; }, 0);
-      b.discount = Math.min(b.discount, b.subtotal);
-      b.total = b.subtotal - b.discount;
-      b.estimated = estimated;
-      b.allDates = dates;
-      return b;
-    });
-  };
-})();
-
-
 /* ===== 42-products.js ===== */
 /* ============================================================================
    42-products.js — Services (rate card) for the services app.
@@ -8201,14 +7368,8 @@ Minimum version required to store current data is: `+i+`.
     };
   }
 
-  /* the prescription that will print on this bill */
-  function chosenRx() {
-    if (!S || S.rxChoice === 'none') return null;
-    if (S.rxChoice === 'draft' || !S.customer) return S.rxDraft;
-    var rxs = M.customerRx(S.customer.id);
-    if (S.rxChoice === 'auto') return rxs[0] || S.rxDraft || null;
-    return M.find('prescriptions', S.rxChoice) || rxs[0] || null;
-  }
+  /* service bills never carry an eye prescription */
+  function chosenRx() { return null; }
 
   /* one readable line: R −1.50 −0.50 ×90 Add +1.00 · L … */
   function rxLine(rx) {
@@ -8319,7 +7480,7 @@ Minimum version required to store current data is: `+i+`.
       (S.editId ? '<div class="banner mb16">' + App.icon('info', 20) + '<div class="tx">You are correcting a bill that is already made' +
         '<small>The invoice number stays the same. Stock is adjusted by the difference, and the version you are replacing is kept on the bill.</small></div></div>' : '') +
       '<div class="pos">' +
-        '<section class="card pos-cust" id="ns-customer" aria-label="Customer and eye prescription"></section>' +
+        '<section class="card pos-cust" id="ns-customer" aria-label="Customer"></section>' +
         '<section class="card pos-items" aria-label="Items on this bill">' +
           '<div class="pos-sec"><span class="pos-label">Items</span><span class="pos-count" id="ns-count"></span></div>' +
           '<div class="search-row">' +
@@ -8628,12 +7789,12 @@ Minimum version required to store current data is: `+i+`.
     });
   }
 
-  /* services or things not in the product list (lens fitting, repair, eye test) */
+  /* anything not in the service list (a one-off job, an extra charge) */
   function customItem(name) {
     var m = UI.modal({
       title: 'Custom item',
       size: 'narrow',
-      body: '<p class="sm muted" style="margin:0 0 12px">For services or things not in your product list — lens fitting, repair, eye test.</p>' +
+      body: '<p class="sm muted" style="margin:0 0 12px">For anything not in your service list — a one-off job or an extra charge.</p>' +
         UI.formHTML([
           { k: 'name', label: 'Item name', required: true, span: 2, value: name || '' },
           { k: 'qty', label: 'Quantity', type: 'number', value: 1, attrs: 'inputmode="numeric" step="1" min="1"' },
@@ -10713,12 +9874,10 @@ Minimum version required to store current data is: `+i+`.
   B.contents = function (d) {
     d = d || App.db;
     var live = function (k) { return (d[k] || []).filter(function (x) { return !x.deletedAt; }); };
-    var rx = live('prescriptions'), sales = live('sales');
+    var sales = live('sales');
     var s = d.settings || {};
     return [
       ['Customers', live('customers').length, 'with addresses, phone numbers and notes'],
-      ['Prescriptions', rx.length, rx.filter(function (r) { return M.hasCl(r); }).length + ' with contact lens power, ' +
-        rx.filter(function (r) { return r.image; }).length + ' with a photo'],
       ['Bills', sales.length, sales.filter(function (x) { return x.edits && x.edits.length; }).length + ' corrected (with their history), ' +
         sales.filter(function (x) { return x.status === 'cancelled'; }).length + ' cancelled'],
       ['Payments', live('payments').length, 'including split payments'],
@@ -10731,7 +9890,7 @@ Minimum version required to store current data is: `+i+`.
       ['Purchases', live('purchases').length, ''],
       ['Expenses', live('expenses').length, ''],
       ['Trash', (d.trash || []).length, 'deleted items you can still restore'],
-      ['Settings', '✓', [s.logo ? 'logo' : '', 'shop details', 'bill and prescription numbering', 'GST', 'shop header colours',
+      ['Settings', '✓', [s.logo ? 'logo' : '', 'shop details', 'bill numbering', 'GST', 'shop header colours',
         'WhatsApp message', 'backup timing'].filter(Boolean).join(', ')]
     ];
   };
@@ -11034,7 +10193,7 @@ Minimum version required to store current data is: `+i+`.
         '' + App.icon(pr.level === 'ok' ? 'archive' : 'alert', 20) + '' +
         '<div class="tx">Storage used: ' + App.bytes(pr.bytes) + ' of about 5 MB (' + pr.pct + '%)' +
         '<small>' + (pr.level === 'danger'
-          ? 'Almost full. Save a backup file now, then delete some prescription/product photos — they take the most space.'
+          ? 'Almost full. Save a backup file now, then delete some product photos — they take the most space.'
           : pr.level === 'warn'
           ? 'Getting full. Photos take the most space; text records use very little.'
           : 'This device opens the app as a file, so it uses the smaller store. Thousands of bills fit here — just go easy on photos.') +
@@ -11049,7 +10208,6 @@ Minimum version required to store current data is: `+i+`.
           cnt('Products', M.products().length) +
           cnt('Invoices', M.sales().length) +
           cnt('Payments', M.payments().length) +
-          cnt('Prescriptions', M.live(d.prescriptions).length) +
           cnt('Expenses', M.expenses().length) +
           cnt('Purchases', M.purchases().length) +
           cnt('Data size', App.bytes(size)) +
@@ -11309,7 +10467,7 @@ Minimum version required to store current data is: `+i+`.
         '</dl>' +
         '<div class="tablewrap"><table class="tbl"><thead><tr><th>Data</th><th class="right">Abhi</th>' +
         '<th class="right">In file</th><th class="right">Difference</th></tr></thead><tbody>' +
-        rowFor('customers', 'Customers') + rowFor('prescriptions', 'Prescriptions') +
+        rowFor('customers', 'Customers') +
         rowFor('products', 'Products') + rowFor('sales', 'Invoices') +
         rowFor('payments', 'Payments') + rowFor('expenses', 'Expenses') +
         rowFor('purchases', 'Purchases') + rowFor('suppliers', 'Suppliers') +
@@ -11535,7 +10693,7 @@ Minimum version required to store current data is: `+i+`.
         { k: 'headerTitle', label: 'Header text', value: s.headerTitle, placeholder: s.shopName, span: 2,
           help: 'Leave empty to use the shop name.', attrs: 'maxlength="80"' },
         { k: 'headerTagline', label: 'Second line (optional)', value: s.headerTagline, span: 2,
-          placeholder: 'e.g. Eye testing · Spectacles · Contact lenses', attrs: 'maxlength="120"' }
+          placeholder: 'e.g. Trusted service since 2010', attrs: 'maxlength="120"' }
       ]) +
       '<div class="frm"><div class="row" style="grid-template-columns:1fr 1fr">' +
         '<div class="f"><label for="sthbg">Background colour</label><div class="color-in">' +
@@ -11756,12 +10914,10 @@ Minimum version required to store current data is: `+i+`.
         { k: 'invoicePadding', label: 'Digits in the number', type: 'number', value: s.invoicePadding, attrs: 'inputmode="numeric" step="1" min="1" max="8"' },
         { k: 'customerPrefix', label: 'Customer ID prefix', value: s.customerPrefix },
         { k: 'skuPrefix', label: 'Product SKU prefix', value: s.skuPrefix },
-        { k: 'rxPrefix', label: 'Prescription prefix', value: s.rxPrefix || 'RX-', help: 'e.g. RX-' },
-        { k: 'rxNextNo', label: 'Next prescription number', type: 'number', value: s.rxNextNo || 1, attrs: 'inputmode="numeric" step="1" min="1"' },
         { k: 'invoiceFooterNote', label: 'Footer note on bills', value: s.invoiceFooterNote, span: 2 }
       ]) +
       '<label class="switch mt12"><input type="checkbox" name="invoicePattern"' + (s.invoicePattern === false ? '' : ' checked') + '>' +
-      '<span class="track"></span><span class="lb">Faint frames pattern behind the bill</span></label>' +
+      '<span class="track"></span><span class="lb">Faint pattern behind the bill</span></label>' +
       '<div class="banner mt12">' + App.icon('file', 20) + '<div class="tx">Next bill: <b id="stprev">' + App.esc(s.invoicePrefix + App.pad(s.invoiceNextNo, s.invoicePadding)) + '</b></div></div>' +
       '</div></div>';
 
@@ -11903,11 +11059,10 @@ Minimum version required to store current data is: `+i+`.
       var st = App.db.settings;
       if (!String(f.shopName || '').trim()) { App.toast('Shop name is required', 'err'); return; }
       ['shopName','ownerName','phone','altPhone','email','address','gstin',
-       'invoicePrefix','invoiceFooterNote','customerPrefix','skuPrefix','rxPrefix'].forEach(function (k) {
+       'invoicePrefix','invoiceFooterNote','customerPrefix','skuPrefix'].forEach(function (k) {
         if (f[k] !== undefined) st[k] = String(f[k]).trim();
       });
       st.invoiceNextNo = Math.max(1, Math.round(App.n(f.invoiceNextNo)) || 1);
-      st.rxNextNo = Math.max(1, Math.round(App.n(f.rxNextNo)) || 1);
       st.invoicePattern = !!f.invoicePattern;
       st.invoicePadding = Math.min(8, Math.max(1, Math.round(App.n(f.invoicePadding)) || 4));
       st.taxEnabled = !!f.taxEnabled;
