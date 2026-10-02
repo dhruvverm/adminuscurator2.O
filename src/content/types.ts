@@ -23,6 +23,8 @@ export interface Plan {
   priceYearly: number | null; // price per month when billed yearly
   priceLabel: string;
   currency: string;
+  /** Short label shown next to the price, e.g. "for 6 months" or "one-time". */
+  period?: string;
   /** "self-serve" plans go through checkout; "sales" plans go to Contact Sales. */
   kind: "self-serve" | "sales";
   cta: string;
