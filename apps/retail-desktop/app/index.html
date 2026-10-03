@@ -1112,6 +1112,9 @@ table.tbl a:hover{text-decoration:underline}
 .iv-items .n{text-align:right;white-space:nowrap}
 .iv-items .it{font-weight:700}
 .iv-items .sub{display:block;font-size:12px;color:var(--ivmute);font-weight:500;margin-top:2px}
+.iv-items .it-row{display:flex;align-items:flex-start;gap:10px}
+.iv-items .it-img{width:40px;height:40px;flex:0 0 auto;border-radius:7px;object-fit:cover;border:1px solid var(--ivline);background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.iv-items .it-txt{min-width:0}
 .iv-sum{display:flex;justify-content:space-between;gap:24px;margin-top:20px;flex-wrap:wrap;align-items:flex-start}
 .iv-notes{flex:1;min-width:200px}
 .iv-notes .iv-card{background:#FFFBEB;border-color:#F3E1AE}
@@ -4644,7 +4647,12 @@ Minimum version required to store current data is: `+i+`.
     h += '<table class="iv-items"><thead><tr><th class="c">#</th><th>Item</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Amount</th></tr></thead><tbody>' +
       s.items.map(function (i, n) {
         var sub = [i.variantLabel ? e(i.variantLabel) : '', i.sku ? e(i.sku) : '', App.n(i.discountAmount) ? 'Discount −' + App.money(i.discountAmount) : ''].filter(Boolean).join(' · ');
-        return '<tr><td class="c">' + (n + 1) + '</td><td><span class="it">' + e(i.name) + '</span>' + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</td>' +
+        var prod = i.productId ? M.find('products', i.productId) : null;
+        var img = prod && App.safeImg(prod.image) ? prod.image : '';
+        return '<tr><td class="c">' + (n + 1) + '</td><td><div class="it-row">' +
+          (img ? '<img class="it-img" src="' + e(img) + '" alt="">' : '') +
+          '<div class="it-txt"><span class="it">' + e(i.name) + '</span>' + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</div>' +
+          '</div></td>' +
           '<td class="n">' + App.n(i.qty) + '</td><td class="n">' + App.money(i.rate) + '</td>' +
           '<td class="n it">' + App.money(i.amount) + '</td></tr>';
       }).join('') + '</tbody></table>';

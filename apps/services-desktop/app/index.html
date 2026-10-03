@@ -1112,6 +1112,9 @@ table.tbl a:hover{text-decoration:underline}
 .iv-items .n{text-align:right;white-space:nowrap}
 .iv-items .it{font-weight:700}
 .iv-items .sub{display:block;font-size:12px;color:var(--ivmute);font-weight:500;margin-top:2px}
+.iv-items .it-row{display:flex;align-items:flex-start;gap:10px}
+.iv-items .it-img{width:40px;height:40px;flex:0 0 auto;border-radius:7px;object-fit:cover;border:1px solid var(--ivline);background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.iv-items .it-txt{min-width:0}
 .iv-sum{display:flex;justify-content:space-between;gap:24px;margin-top:20px;flex-wrap:wrap;align-items:flex-start}
 .iv-notes{flex:1;min-width:200px}
 .iv-notes .iv-card{background:#FFFBEB;border-color:#F3E1AE}
@@ -4823,7 +4826,12 @@ Minimum version required to store current data is: `+i+`.
     h += '<table class="iv-items"><thead><tr><th class="c">#</th><th>Item</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Amount</th></tr></thead><tbody>' +
       s.items.map(function (i, n) {
         var sub = [i.variantLabel ? e(i.variantLabel) : '', i.sku ? e(i.sku) : '', App.n(i.discountAmount) ? 'Discount −' + App.money(i.discountAmount) : ''].filter(Boolean).join(' · ');
-        return '<tr><td class="c">' + (n + 1) + '</td><td><span class="it">' + e(i.name) + '</span>' + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</td>' +
+var prod = i.productId ? M.find('products', i.productId) : null;
+        var img = prod && App.safeImg(prod.image) ? prod.image : '';
+        return '<tr><td class="c">' + (n + 1) + '</td><td><div class="it-row">' +
+          (img ? '<img class="it-img" src="' + e(img) + '" alt="">' : '') +
+          '<div class="it-txt"><span class="it">' + e(i.name) + '</span>' + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</div>' +
+          '</div></td>' +
           '<td class="n">' + App.n(i.qty) + '</td><td class="n">' + App.money(i.rate) + '</td>' +
           '<td class="n it">' + App.money(i.amount) + '</td></tr>';
       }).join('') + '</tbody></table>';
@@ -7188,10 +7196,17 @@ Minimum version required to store current data is: `+i+`.
       { k: 'costPrice', label: 'Your cost (₹)', type: 'number', value: p ? p.costPrice : '', attrs: 'inputmode="decimal" step="0.01" min="0"', help: 'Optional — for profit reports' },
       { k: 'notes', label: 'Notes', type: 'textarea', value: p ? p.notes : '', span: 2 }
     ];
+
+    var imageData = p ? App.safeImg(p.image) : '';
+
     var m = UI.modal({
       title: p ? 'Edit service' : 'New Service',
       size: 'wide',
-      body: UI.formHTML(fields, 2),
+      body: UI.formHTML(fields, 2) +
+        '<div class="f mt12"><label>Photo (optional)</label>' +
+        '<input type="file" id="prdimg" accept="image/*" style="height:auto;padding:11px">' +
+        '<div id="prdimgprev" class="mt8">' + (App.safeImg(imageData) ? '<img src=\"' + App.esc(imageData) + '\" style="max-width:180px;border-radius:9px"><button class="btn btn-sm mt8" id="prdimgdel">Remove photo</button>' : '') + '</div>' +
+        '<div class="sm muted mt4">Shown next to this service on printed bills.</div></div>',
       buttons: [
         { label: 'Cancel', onClick: function (a) { a.close(); } },
         { label: p ? 'Save' : 'Add', class: 'btn-primary', onClick: function (a) {
@@ -7199,12 +7214,27 @@ Minimum version required to store current data is: `+i+`.
             var d = UI.readForm(a.el);
             if (!d.name.trim()) return UI.markError(a.el, 'name', 'Name is required');
             if (App.n(d.sellPrice) < 0) return UI.markError(a.el, 'sellPrice', 'Price cannot be negative');
+            d.image = imageData;
             var saved = p ? M.productUpdate(p.id, d) : M.productCreate(d);
             a.close();
             App.toast(p ? 'Service updated' : 'Service added', 'ok');
             if (onSaved) onSaved(saved); else UI.render();
           } }
       ]
+    });
+
+    App.el('#prdimg', m.el).addEventListener('change', function () {
+      var f = this.files[0];
+      if (!f) return;
+      if (f.size > 8 * 1024 * 1024) { App.toast('That photo is too large. Please choose one under 8 MB.', 'err'); this.value = ''; return; }
+      App.shrinkImage(f, 700, 0.7).then(function (u) {
+        if (!App.safeImg(u) || u.length > 2500000) { App.toast('This photo could not be used. Please choose a JPG or PNG photo.', 'err', 5000); return; }
+        imageData = u;
+        App.el('#prdimgprev', m.el).innerHTML = '<img src="' + App.esc(u) + '" style="max-width:180px;border-radius:9px"><button class="btn btn-sm mt8" id="prdimgdel">Remove photo</button>';
+      });
+    });
+    App.on(m.el, 'click', '#prdimgdel', function () {
+      imageData = ''; App.el('#prdimgprev', m.el).innerHTML = ''; App.el('#prdimg', m.el).value = '';
     });
     return m;
   };
