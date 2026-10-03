@@ -1195,6 +1195,33 @@ ol.checkout-steps {
   background: currentColor;
   opacity: 0.55;
 }
+.logo-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s, transform 0.2s;
+}
+.logo-brand:hover {
+  color: var(--text);
+  transform: translateY(-1px);
+}
+.logo-brand__mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
 
 /* ==========================================================================
    Problems
@@ -3333,4 +3360,45 @@ ol.checkout-steps {
 .install-tip {
   margin: 0 0 16px;
   font-size: 0.875rem;
+}
+
+/* ==========================================================================
+   Floating WhatsApp button
+   ========================================================================== */
+.wa-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 10px 25px -6px rgba(37, 211, 102, 0.6), 0 4px 10px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: wa-pop 0.4s ease both;
+}
+.wa-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 14px 32px -6px rgba(37, 211, 102, 0.7), 0 6px 14px rgba(0, 0, 0, 0.18);
+}
+.wa-fab:active {
+  transform: scale(0.96);
+}
+.wa-fab:focus-visible {
+  outline: 3px solid color-mix(in srgb, #25d366 55%, #fff);
+  outline-offset: 3px;
+}
+@keyframes wa-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+@media (max-width: 560px) {
+  .wa-fab { right: 16px; bottom: 16px; width: 52px; height: 52px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wa-fab { animation: none; }
 }

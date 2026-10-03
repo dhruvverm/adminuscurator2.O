@@ -53,6 +53,13 @@ export const siteConfig = {
     phone: "+1 (000) 000-0000",
     address: "[Street Address], [City], [State/Region] [Postal Code], [Country]",
     hours: "Monday – Friday, 9:00 AM – 6:00 PM [Time Zone]",
+    /**
+     * WhatsApp number in full international format, digits only (e.g.
+     * "919876543210"). Leave empty to hide the floating WhatsApp button.
+     */
+    whatsapp: "",
+    /** Message pre-filled when a visitor taps the WhatsApp button. */
+    whatsappMessage: "Hi! I'd like to know more about Adminuscurator.",
   },
 
   /** Social links. Remove an entry (or leave the URL empty) to hide its icon. */

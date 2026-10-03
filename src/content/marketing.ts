@@ -30,11 +30,14 @@ export const stats: { value: string; label: string; placeholder: boolean }[] = [
   { value: "Easy", label: "Setup", placeholder: true },
 ];
 
-/** Placeholder customer logos — replace `name` with real logos in /public. */
+/** Customer logos. Each entry links to the company's website. */
 export const logoCloud = {
-  heading: "Trusted by teams and businesses worldwide",
-  placeholder: true,
-  logos: ["Company A", "Company B", "Company C", "Company D", "Company E", "Company F"],
+  heading: "Trusted by teams and businesses",
+  placeholder: false,
+  logos: [
+    { name: "Vedera", href: "https://www.vedera.in/" },
+    { name: "RatedR", href: "https://ratedr.in/" },
+  ] as { name: string; href?: string }[],
 };
 
 export const problems: { icon: IconName; title: string; description: string }[] = [

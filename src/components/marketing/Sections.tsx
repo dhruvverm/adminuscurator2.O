@@ -150,12 +150,23 @@ export function TrustSection() {
             {logoCloud.heading} <PlaceholderTag show={logoCloud.placeholder} label="Placeholder logos" />
           </p>
           <ul className="logo-cloud__row">
-            {logoCloud.logos.map((name) => (
-              <li key={name} className="logo-placeholder">
-                <i aria-hidden="true" />
-                {name}
-              </li>
-            ))}
+            {logoCloud.logos.map((logo) =>
+              logo.href ? (
+                <li key={logo.name}>
+                  <a className="logo-brand" href={logo.href} target="_blank" rel="noopener noreferrer">
+                    <span className="logo-brand__mark" aria-hidden="true">
+                      {logo.name.charAt(0)}
+                    </span>
+                    {logo.name}
+                  </a>
+                </li>
+              ) : (
+                <li key={logo.name} className="logo-placeholder">
+                  <i aria-hidden="true" />
+                  {logo.name}
+                </li>
+              )
+            )}
           </ul>
         </div>
       </div>
