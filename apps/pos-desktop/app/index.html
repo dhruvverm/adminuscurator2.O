@@ -1351,6 +1351,26 @@ html[data-theme="dark"] .savebar .btn{background:#1a0d0d;color:#F87171;border-co
 .pos-hold:hover{border-color:var(--primary);color:var(--primary)}
 .pos-hold:disabled{opacity:.5;cursor:not-allowed}
 
+/* ===== Online orders · Swiggy / Zomato (62-online-orders.js) =========== */
+.oo-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.oo-card{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:10px}
+.oo-card.is-new{border-color:var(--accent);box-shadow:0 8px 24px -14px var(--accent)}
+.oo-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.oo-tag{color:#fff;font-weight:800;font-size:12px;padding:2px 10px;border-radius:20px;letter-spacing:.02em}
+.oo-id{font-size:12px;color:var(--fg-3)}
+.oo-when{font-size:12px;color:var(--fg-3);margin-left:auto}
+.oo-new{font-size:11px;font-weight:800;color:#fff;background:var(--accent);border-radius:6px;padding:1px 7px}
+.oo-accepted{font-size:11px;font-weight:700;color:var(--fg-3)}
+.oo-cust{font-size:13px;color:var(--fg-2);display:flex;align-items:center;gap:5px}
+.oo-items{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0}
+.oo-line{display:flex;justify-content:space-between;font-size:14px}
+.oo-note{font-size:13px;color:var(--fg-2);font-style:italic}
+.oo-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.oo-total{font-weight:800;font-size:18px}
+.oo-acts{display:flex;gap:6px}
+.nav-item .badge.badge-live{background:var(--accent);color:#fff;animation:oo-pulse 1.6s ease-in-out infinite}
+@keyframes oo-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
 </style>
 </head>
 <body>
@@ -2187,6 +2207,9 @@ Minimum version required to store current data is: `+i+`.
         waPhoneId: '',             /* phone number ID */
         waBillTemplate: '',        /* approved template name for sending a bill (optional) */
         waLang: 'en',              /* template language code */
+        /* Online orders (Swiggy / Zomato via your POS-partner relay) */
+        ordersSyncUrl: '',         /* relay endpoint the app polls for new aggregator orders */
+        ordersSyncKey: '',         /* auth key sent to the relay */
         /* invoice look */
         logo: '',                  /* small data:image picture shown on invoices */
         /* shop header across the top of the app */
@@ -3409,6 +3432,7 @@ Minimum version required to store current data is: `+i+`.
       paymentMethod: mainMethod,
       paymentSplit: split.length > 1 ? split : null,
       notes: (d.notes || '').trim(),
+      channel: d.channel || 'pos',   /* 'pos' | 'swiggy' | 'zomato' | ... — where the order came from */
       status: 'active',
       createdAt: App.nowISO()
     };
@@ -4230,6 +4254,9 @@ Minimum version required to store current data is: `+i+`.
     var low = App.M.lowStock().length;
     var b = App.el('[data-nav="products"] .badge');
     if (b) { b.textContent = low; b.style.display = low ? '' : 'none'; }
+    var oo = App.M.onlineOrders ? App.M.onlineOrders().filter(function (o) { return o.status === 'new'; }).length : 0;
+    var ob = App.el('[data-nav="online-orders"] .badge');
+    if (ob) { ob.textContent = oo; ob.style.display = oo ? '' : 'none'; ob.classList.toggle('badge-live', oo > 0); }
   };
 
   /* ---------------- theme ---------------- */
@@ -11627,6 +11654,14 @@ Minimum version required to store current data is: `+i+`.
         '<div class="flex gap8 mt12 wrap" style="align-items:center"><button class="btn" id="stwatest" type="button">' + App.icon('info', 16) + '<span>Test connection</span></button>' +
           '<span id="stwaresult" class="sm"></span></div>' +
         '</div></div>';
+
+      html += '<div class="card"><div class="card-head"><h3>' + App.icon('truck', 18) + '<span>Online orders · Swiggy / Zomato</span></h3></div><div class="card-body">' +
+        '<div class="sm muted mb12">Swiggy/Zomato orders arrive through your POS-partner relay — a server that receives their order webhooks. Paste its address and key here; new orders then appear in <b>Online Orders</b>.</div>' +
+        UI.formHTML([
+          { k: 'ordersSyncUrl', label: 'Orders relay URL', value: s.ordersSyncUrl || '', span: 2, help: 'e.g. https://your-relay.example.com/orders' },
+          { k: 'ordersSyncKey', label: 'Relay key', value: s.ordersSyncKey || '', span: 2 }
+        ], 2) +
+        '</div></div>';
     }
 
     /* backup timing */
@@ -11772,7 +11807,7 @@ Minimum version required to store current data is: `+i+`.
       if (!String(f.shopName || '').trim()) { App.toast('Shop name is required', 'err'); return; }
       ['shopName','ownerName','phone','altPhone','email','address','gstin',
        'invoicePrefix','invoiceFooterNote','customerPrefix','skuPrefix',
-       'waToken','waPhoneId','waBillTemplate','waLang'].forEach(function (k) {
+       'waToken','waPhoneId','waBillTemplate','waLang','ordersSyncUrl','ordersSyncKey'].forEach(function (k) {
         if (f[k] !== undefined) st[k] = String(f[k]).trim();
       });
       st.invoiceNextNo = Math.max(1, Math.round(App.n(f.invoiceNextNo)) || 1);
@@ -12346,6 +12381,218 @@ Minimum version required to store current data is: `+i+`.
 })();
 
 
+/* ===== 62-online-orders.js ===== */
+/* ============================================================================
+   62-online-orders.js — Zomato / Swiggy online orders (Online edition).
+   Orders arrive from your POS-partner relay (a small server that receives
+   Swiggy/Zomato webhooks) and appear here, tagged by channel. Accept one and
+   make a bill; the sale is tagged with the channel so reports can separate it.
+
+   Relay contract — GET {ordersSyncUrl}?since=<ms>  (Authorization: Bearer <key>):
+     { "orders": [ { "extId": "...", "channel": "swiggy"|"zomato",
+                     "placedAt": "<ISO or ms>", "customerName": "...",
+                     "customerPhone": "...", "note": "...",
+                     "items": [ { "name": "...", "qty": 1, "price": 0 } ],
+                     "total": 0 } ] }
+   There is no public Swiggy/Zomato API for shops — the relay needs an approved
+   POS-partner integration. Use "Test order" to try the flow without it.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var App = window.App, M = App.M, UI = App.UI;
+
+  var CH = {
+    swiggy: { label: 'Swiggy', color: '#FC8019' },
+    zomato: { label: 'Zomato', color: '#E23744' },
+    other:  { label: 'Online', color: '#4F46E5' }
+  };
+  function chan(c) { return CH[c] || CH.other; }
+
+  /* ---------- model ---------- */
+  M.onlineOrders = function () {
+    return (App.db.orders || []).filter(function (o) { return o.channel && o.channel !== 'pos'; })
+      .sort(function (a, b) { return (b.placedAt || '') > (a.placedAt || '') ? 1 : -1; });
+  };
+  function exists(channel, extId) {
+    return (App.db.orders || []).some(function (o) { return o.channel === channel && String(o.extId) === String(extId); });
+  }
+  function ingest(o) {
+    if (!o || o.extId == null) return false;
+    var ch = String(o.channel || 'other').toLowerCase();
+    if (!CH[ch]) ch = 'other';
+    if (exists(ch, o.extId)) return false;
+    if (!App.db.orders) App.db.orders = [];
+    var lines = (o.items || []).map(function (i) { return { productId: '', name: i.name, rate: App.n(i.price), qty: App.n(i.qty) || 1 }; });
+    var total = App.n(o.total) || App.sum(lines, function (l) { return l.rate * l.qty; });
+    App.db.orders.push({
+      id: App.uid('ord'), channel: ch, extId: String(o.extId), status: 'new',
+      lines: lines, customerName: o.customerName || '', customerPhone: o.customerPhone || '',
+      note: o.note || '', total: total,
+      placedAt: o.placedAt ? new Date(o.placedAt).toISOString() : App.nowISO(),
+      createdAt: App.nowISO(), updatedAt: App.nowISO()
+    });
+    return true;
+  }
+  M.onlineOrderStatus = function (id, status) {
+    var o = (App.db.orders || []).filter(function (x) { return x.id === id; })[0];
+    if (o) { o.status = status; o.updatedAt = App.nowISO(); App.store.touch(); }
+    return o;
+  };
+  M.onlineOrderRemove = function (id) {
+    App.db.orders = (App.db.orders || []).filter(function (o) { return o.id !== id; });
+    App.store.touch();
+  };
+
+  /* ---------- sync client ---------- */
+  var OO = {};
+  App.OO = OO;
+  OO.chan = chan;
+
+  OO.sync = function () {
+    var s = App.db.settings;
+    var url = (s.ordersSyncUrl || '').trim();
+    if (!url) return Promise.resolve({ added: 0, skipped: true });
+    var since = App.n(s._ordersSince) || 0;
+    var u = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'since=' + encodeURIComponent(since);
+    return fetch(u, { headers: s.ordersSyncKey ? { 'Authorization': 'Bearer ' + s.ordersSyncKey } : {} })
+      .then(function (r) { if (!r.ok) throw new Error('Sync failed (HTTP ' + r.status + ')'); return r.json(); })
+      .then(function (j) {
+        var list = (j && j.orders) || [];
+        var added = 0, maxTs = since;
+        list.forEach(function (o) { if (ingest(o)) added++; var t = +new Date(o.placedAt || 0); if (t > maxTs) maxTs = t; });
+        if (maxTs > since) s._ordersSince = maxTs;
+        if (added) { App.store.saveNow(); if (UI.refreshBadges) UI.refreshBadges(); }
+        return { added: added };
+      });
+  };
+
+  /* make a sample Swiggy/Zomato order so the flow can be seen without the relay */
+  var N = 0;
+  OO.simulate = function (channel) {
+    var menu = M.products();
+    var pick = function () { return menu.length ? menu[Math.floor(Math.random() * menu.length)] : { name: 'Item', sellPrice: 100 }; };
+    var a = pick(), b = pick();
+    var items = [{ name: a.name, qty: 1 + Math.floor(Math.random() * 2), price: App.n(a.sellPrice) || 100 }];
+    if (b.name !== a.name) items.push({ name: b.name, qty: 1, price: App.n(b.sellPrice) || 80 });
+    ingest({
+      extId: channel.toUpperCase().slice(0, 2) + Date.now().toString().slice(-6) + (N++),
+      channel: channel, placedAt: new Date().toISOString(),
+      customerName: ['Rahul', 'Priya', 'Aman', 'Sana'][Math.floor(Math.random() * 4)] + ' (via ' + chan(channel).label + ')',
+      items: items
+    });
+    App.store.saveNow();
+    if (UI.refreshBadges) UI.refreshBadges();
+  };
+
+  /* background poll: when online + a relay URL is set, pull new orders */
+  var timer = null;
+  OO.startPoll = function () {
+    if (timer) return;
+    if (!App.isOnline || !App.isOnline()) return;
+    if (!(App.db.settings.ordersSyncUrl || '').trim()) return;
+    var run = function () {
+      OO.sync().then(function (r) {
+        if (r.added) {
+          App.toast(r.added + ' new online order' + (r.added === 1 ? '' : 's'), 'ok', 4000);
+          if (location.hash === '#/online-orders') UI.render();
+        }
+      }).catch(function () { /* stay quiet on transient network errors */ });
+    };
+    timer = setInterval(run, 20000);
+    run();
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') run(); });
+  };
+
+  /* ---------- screen ---------- */
+  UI.route('online-orders', function (view) {
+    if (!App.isOnline || !App.isOnline()) { UI.go('/pos'); return; }
+    OO.startPoll();
+    var orders = M.onlineOrders();
+    var configured = !!(App.db.settings.ordersSyncUrl || '').trim();
+
+    var html = '<div class="view-head"><div><h1>Online Orders</h1>' +
+      '<div class="sub">Swiggy &amp; Zomato orders land here automatically</div></div>' +
+      '<div class="actions">' +
+        '<button class="btn" id="oorefresh">' + App.icon('restore', 18) + '<span>Refresh</span></button>' +
+        '<button class="btn btn-sm" id="ootest-swiggy">+ Swiggy test</button>' +
+        '<button class="btn btn-sm" id="ootest-zomato">+ Zomato test</button>' +
+      '</div></div>';
+
+    if (!configured) html += '<div class="banner warn mb16">' + App.icon('alert', 20) +
+      '<div class="tx">No relay connected yet. Add your orders relay URL in Settings to receive real Swiggy/Zomato orders. Until then, use the test buttons.</div></div>';
+
+    if (!orders.length) {
+      html += '<div class="card">' + UI.empty('truck', 'No online orders', 'New Swiggy and Zomato orders will appear here as they come in.') + '</div>';
+    } else {
+      html += '<div class="oo-list">' + orders.map(orderCard).join('') + '</div>';
+    }
+    view.innerHTML = html;
+
+    App.el('#oorefresh', view).addEventListener('click', function () {
+      var btn = this; btn.disabled = true;
+      OO.sync().then(function (r) { App.toast(r.skipped ? 'Add a relay URL in Settings' : (r.added ? r.added + ' new order(s)' : 'No new orders'), 'ok', 3000); UI.render(); })
+        .catch(function (e) { App.toast(e.message, 'err', 5000); }).then(function () { btn.disabled = false; });
+    });
+    App.el('#ootest-swiggy', view).addEventListener('click', function () { OO.simulate('swiggy'); UI.render(); });
+    App.el('#ootest-zomato', view).addEventListener('click', function () { OO.simulate('zomato'); UI.render(); });
+
+    App.on(view, 'click', '[data-accept]', function () { M.onlineOrderStatus(this.getAttribute('data-accept'), 'accepted'); App.store.saveNow(); UI.refreshBadges(); UI.render(); });
+    App.on(view, 'click', '[data-bill]', function () { billOrder(this.getAttribute('data-bill')); });
+    App.on(view, 'click', '[data-reject]', function () {
+      var id = this.getAttribute('data-reject');
+      UI.confirm({ title: 'Remove this order?', message: 'Remove it from the list?', okLabel: 'Remove', danger: true })
+        .then(function (ok) { if (ok) { M.onlineOrderRemove(id); App.store.saveNow(); UI.refreshBadges(); UI.render(); } });
+    });
+  });
+
+  function orderCard(o) {
+    var c = chan(o.channel);
+    var items = (o.lines || []).map(function (l) { return '<div class="oo-line"><span>' + App.n(l.qty) + '× ' + App.esc(l.name) + '</span><span>' + App.money(App.round2(l.qty * l.rate)) + '</span></div>'; }).join('');
+    var isNew = o.status === 'new';
+    return '<div class="oo-card' + (isNew ? ' is-new' : '') + '">' +
+      '<div class="oo-top">' +
+        '<span class="oo-tag" style="background:' + c.color + '">' + c.label + '</span>' +
+        '<span class="oo-id mono">#' + App.esc(o.extId) + '</span>' +
+        '<span class="oo-when">' + App.fmtDateTime(o.placedAt).split(', ')[1] + '</span>' +
+        (isNew ? '<span class="oo-new">NEW</span>' : '<span class="oo-accepted">Accepted</span>') +
+      '</div>' +
+      (o.customerName ? '<div class="oo-cust">' + App.icon('user', 14) + ' ' + App.esc(o.customerName) + (o.customerPhone ? ' · ' + App.esc(o.customerPhone) : '') + '</div>' : '') +
+      '<div class="oo-items">' + items + '</div>' +
+      (o.note ? '<div class="oo-note">“' + App.esc(o.note) + '”</div>' : '') +
+      '<div class="oo-foot"><span class="oo-total">' + App.money(o.total) + '</span>' +
+        '<span class="oo-acts">' +
+          (isNew ? '<button class="btn btn-sm" data-accept="' + o.id + '">Accept</button>' : '') +
+          '<button class="btn btn-sm btn-primary" data-bill="' + o.id + '">Make bill</button>' +
+          '<button class="btn btn-sm" data-reject="' + o.id + '">' + App.icon('x', 15) + '</button>' +
+        '</span></div>' +
+    '</div>';
+  }
+
+  /* turn an online order into a sale tagged with its channel */
+  function billOrder(id) {
+    var o = (App.db.orders || []).filter(function (x) { return x.id === id; })[0];
+    if (!o) return;
+    var c = chan(o.channel);
+    var sale;
+    try {
+      sale = M.saleCreate({
+        items: (o.lines || []).map(function (l) { return { productId: l.productId || '', name: l.name, qty: l.qty, rate: l.rate }; }),
+        payments: [{ method: c.label, amount: o.total }],
+        customerName: o.customerName || '',
+        channel: o.channel,
+        notes: c.label + ' order #' + o.extId + (o.note ? ' · ' + o.note : ''),
+        allowNegativeStock: true
+      });
+    } catch (e) { App.toast(e.message, 'err', 6000); return; }
+    M.onlineOrderRemove(id);
+    App.store.saveNow();
+    if (UI.refreshBadges) UI.refreshBadges();
+    App.toast(c.label + ' order billed · ' + sale.invoiceNo, 'ok', 3500);
+    UI.render();
+  }
+})();
+
+
 /* ===== 99-boot.js ===== */
 /* =========================================================================
    99-boot.js — sidebar, global search, startup sequence
@@ -12361,6 +12608,7 @@ Minimum version required to store current data is: `+i+`.
     { k: 'dashboard', i: 'home', l: 'Dashboard' },
     { k: 'sale',      i: 'receipt', l: 'New Bill', href: '/sale/new' },
     { k: 'sales',     i: 'list', l: 'Sales / Invoices' },
+    { k: 'online-orders', i: 'truck', l: 'Online Orders', href: '/online-orders', badge: true, when: function () { return App.isOnline && App.isOnline(); } },
     { k: 'campaigns', i: 'chat', l: 'WhatsApp Campaigns', href: '/campaigns', when: function () { return App.isOnline && App.isOnline(); } },
     { k: 'payments',  i: 'wallet', l: 'Payments' },
     { k: 'expenses',  i: 'trendDown', l: 'Expenses' },
@@ -12590,6 +12838,9 @@ Minimum version required to store current data is: `+i+`.
       /* first-run guided tour — waits for the welcome modal to close, then
          runs once (App.tour re-schedules itself while a modal is open). */
       if (App.tour) setTimeout(function () { App.tour.start(); }, 900);
+
+      /* Online edition: start pulling Swiggy/Zomato orders from the relay. */
+      if (App.OO && App.OO.startPoll) App.OO.startPoll();
 
       /* automatic daily backup */
       App.Backup.autoTick();
