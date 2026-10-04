@@ -20,6 +20,10 @@ license.setPath(app.getPath("userData"));
 // The activation screen talks to the licence check here in the main process.
 ipcMain.handle("license:status", () => license.status());
 ipcMain.handle("license:activate", (_e, code) => license.activate(code));
+ipcMain.on("license:edition-sync", (e) => {
+  try { const st = license.status(); e.returnValue = st && st.online ? "online" : ((st && st.kind) || null); }
+  catch { e.returnValue = null; }
+});
 ipcMain.handle("license:open", () => {
   if (license.status().state === "active" && win) win.loadFile(INDEX);
 });

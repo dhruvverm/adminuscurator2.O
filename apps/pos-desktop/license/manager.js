@@ -66,9 +66,10 @@ function status() {
   if (state.tampered) return { state: "locked", message: "The licence file could not be verified. Please enter a valid activation code." };
 
   if (state.active) {
-    // Lifetime licences never expire.
-    if (state.active.kind === "lifetime" || state.active.expiresAt === null) {
-      return { state: "active", kind: "lifetime", expiresAt: null, daysLeft: null };
+    // Lifetime and Online licences never expire.
+    if (state.active.kind === "lifetime" || state.active.kind === "online" || state.active.expiresAt === null) {
+      const k = state.active.kind || "lifetime";
+      return { state: "active", kind: k, edition: k, online: k === "online", expiresAt: null, daysLeft: null };
     }
     const effectiveNow = Math.max(now, state.lastSeen);
     const remaining = state.active.expiresAt - effectiveNow;
@@ -99,12 +100,13 @@ function activate(input) {
   }
 
   const startedAt = Math.max(now, state.lastSeen);
-  const expiresAt = kind === "lifetime" ? null : startedAt + TRIAL_MS;
+  const noExpiry = kind === "lifetime" || kind === "online";
+  const expiresAt = noExpiry ? null : startedAt + TRIAL_MS;
   state.used[id] = { kind, activatedAt: startedAt, expiresAt };
   state.active = { id, kind, activatedAt: startedAt, expiresAt };
   state.lastSeen = startedAt;
   save(state);
-  return { ok: true, kind, expiresAt, daysLeft: kind === "lifetime" ? null : TRIAL_DAYS };
+  return { ok: true, kind, edition: kind, online: kind === "online", expiresAt, daysLeft: noExpiry ? null : TRIAL_DAYS };
 }
 
 module.exports = { setPath, status, activate, TRIAL_DAYS };

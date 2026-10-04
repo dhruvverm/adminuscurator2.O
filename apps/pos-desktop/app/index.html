@@ -1700,22 +1700,28 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   'use strict';
   var App = window.App = window.App || {};
 
-  // Electron already gates the desktop app — do nothing there.
+  // Electron already gates the desktop app — do nothing there, but read the
+  // edition the desktop shell decided (so Online features can appear).
   if (window.OpticalShopDesktop && window.OpticalShopDesktop.isDesktop) {
-    App.license = { required: function () { return false; } };
+    App.license = {
+      required: function () { return false; },
+      online: function () { return (window.OpticalShopDesktop.edition || '') === 'online'; },
+      edition: function () { return window.OpticalShopDesktop.edition || null; }
+    };
     return;
   }
 
   var SECRET = '5c2239d423928bd5db1d3f04407cd6266e598aa677483bb0b9ed0369f58b9d9b';
   // If the build did not inject a secret, fail open (never lock people out by mistake).
   if (SECRET.indexOf('__') === 0) {
-    App.license = { required: function () { return false; } };
+    App.license = { required: function () { return false; }, online: function () { return false; }, edition: function () { return null; } };
     return;
   }
 
   var ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
   var ID_BYTES = 5, CHECK_BYTES = 4;
-  var KIND = { 0: 'trial', 1: 'lifetime' };
+  var KIND = { 0: 'trial', 1: 'lifetime', 2: 'online' };
+  var EDITION = null;   /* the kind of the active licence, once known ('trial' | 'lifetime' | 'online') */
   var TRIAL_DAYS = 7, DAY = 86400000, TRIAL_MS = TRIAL_DAYS * DAY, SKEW = 6 * 3600000;
   var STORE_KEY = 'osm.lic.v1';
 
@@ -1797,9 +1803,12 @@ if (typeof window !== 'undefined' && window.addEventListener) {
       if (now > s.lastSeen) { s.lastSeen = now; save(s); }
       if (s.tampered) return { state: 'locked', message: 'Saved activation could not be verified. Please enter a valid code.' };
       if (s.active) {
-        if (s.active.kind === 'lifetime' || s.active.expiresAt === null) return { state: 'active', kind: 'lifetime', daysLeft: null };
+        if (s.active.kind === 'lifetime' || s.active.kind === 'online' || s.active.expiresAt === null) {
+          EDITION = s.active.kind || 'lifetime';
+          return { state: 'active', kind: EDITION, online: EDITION === 'online', daysLeft: null };
+        }
         var remaining = s.active.expiresAt - Math.max(now, s.lastSeen);
-        if (remaining > 0) return { state: 'active', kind: 'trial', expiresAt: s.active.expiresAt, daysLeft: Math.ceil(remaining / DAY) };
+        if (remaining > 0) { EDITION = s.active.kind || 'trial'; return { state: 'active', kind: 'trial', online: false, expiresAt: s.active.expiresAt, daysLeft: Math.ceil(remaining / DAY) }; }
         return { state: 'expired', message: 'Your ' + TRIAL_DAYS + '-day access has ended. Enter a new activation code to continue.' };
       }
       return { state: 'none', message: 'Enter your activation code to start.' };
@@ -1813,10 +1822,11 @@ if (typeof window !== 'undefined' && window.addEventListener) {
       if (!parsed) return { ok: false, code: 'invalid', message: 'That code is not valid. Please check it and try again.' };
       if (s.used[parsed.id]) return { ok: false, code: 'used', message: 'This code has already been used on this device and cannot be used again.' };
       var startedAt = Math.max(now, s.lastSeen);
-      var expiresAt = parsed.kind === 'lifetime' ? null : startedAt + TRIAL_MS;
+      var expiresAt = (parsed.kind === 'lifetime' || parsed.kind === 'online') ? null : startedAt + TRIAL_MS;
       s.used[parsed.id] = { kind: parsed.kind, activatedAt: startedAt, expiresAt: expiresAt };
       s.active = { id: parsed.id, kind: parsed.kind, activatedAt: startedAt, expiresAt: expiresAt };
       s.lastSeen = startedAt;
+      EDITION = parsed.kind;
       return save(s).then(function () { return { ok: true, kind: parsed.kind }; });
     });
   }
@@ -1825,6 +1835,9 @@ if (typeof window !== 'undefined' && window.addEventListener) {
     required: function () { return true; },
     status: status,
     activate: activate,
+    /** True when the active licence is the Online edition (WhatsApp unlocked). */
+    online: function () { return EDITION === 'online'; },
+    edition: function () { return EDITION; },
     /** Runs onOk() when access is active; otherwise shows the gate and calls onOk() after a successful code. */
     guard: function (onOk) {
       status().then(function (st) {
@@ -2169,6 +2182,11 @@ Minimum version required to store current data is: `+i+`.
         whatsappTemplate: '',
         whatsappSendAs: 'pdf',     /* 'pdf' or 'image' */
         whatsappOpenChatFirst: true, /* open the chat by number first, so unsaved numbers work */
+        /* WhatsApp Cloud API (Online edition) — the shop pastes these once */
+        waToken: '',               /* permanent access token */
+        waPhoneId: '',             /* phone number ID */
+        waBillTemplate: '',        /* approved template name for sending a bill (optional) */
+        waLang: 'en',              /* template language code */
         /* invoice look */
         logo: '',                  /* small data:image picture shown on invoices */
         /* shop header across the top of the app */
@@ -9099,6 +9117,12 @@ Minimum version required to store current data is: `+i+`.
     else {
       App.toast('Bill ' + sale.invoiceNo + ' saved · ' + App.money(sale.total), 'ok', 4000);
     }
+    /* Online edition: send the bill straight to the customer's WhatsApp */
+    if (App.isOnline && App.isOnline() && App.WA && App.WA.configured() && sale.customerMobile) {
+      App.toast('Sending bill on WhatsApp…', 'ok', 2000);
+      App.WA.sendBill(sale).then(function () { App.toast('Bill sent on WhatsApp ✓', 'ok', 3000); })
+        .catch(function (e) { App.toast('WhatsApp: ' + e.message, 'err', 6000); });
+    }
     if (wasTable) { UI.go('/tables'); return; }
     /* back to a clean POS for the next customer */
     if (location.hash !== '#/pos') UI.go('/pos'); else { drawGrid(); drawCart(); }
@@ -11591,6 +11615,20 @@ Minimum version required to store current data is: `+i+`.
         App.icon('restore', 16) + '<span>Use the default message</span></button></div>' +
       '</div></div>';
 
+    if (App.isOnline && App.isOnline()) {
+      html += '<div class="card"><div class="card-head"><h3>' + App.icon('chat', 18) + '<span>WhatsApp auto-send &amp; campaigns · Online</span></h3></div><div class="card-body">' +
+        '<div class="sm muted mb12">Paste your WhatsApp Cloud API details once to send bills and run campaigns automatically. Needs a Meta WhatsApp Business account with your number on the Cloud API (and approved templates for campaigns). Your token stays on this device.</div>' +
+        UI.formHTML([
+          { k: 'waPhoneId', label: 'Phone number ID', value: s.waPhoneId || '', help: 'Meta → WhatsApp → API setup' },
+          { k: 'waLang', label: 'Template language', value: s.waLang || 'en', help: 'e.g. en, en_US, hi' },
+          { k: 'waToken', label: 'Access token', value: s.waToken || '', span: 2, help: 'Permanent token — kept on this device only.' },
+          { k: 'waBillTemplate', label: 'Bill template name (optional)', value: s.waBillTemplate || '', span: 2, help: 'An approved template to send bills outside the 24-hour window. Leave empty to send plain text.' }
+        ], 2) +
+        '<div class="flex gap8 mt12 wrap" style="align-items:center"><button class="btn" id="stwatest" type="button">' + App.icon('info', 16) + '<span>Test connection</span></button>' +
+          '<span id="stwaresult" class="sm"></span></div>' +
+        '</div></div>';
+    }
+
     /* backup timing */
     html += backupCard(s);
 
@@ -11674,6 +11712,22 @@ Minimum version required to store current data is: `+i+`.
       App.toast('Default message restored — tap Save to keep it');
     });
 
+    var waTest = App.el('#stwatest', view);
+    if (waTest) waTest.addEventListener('click', function () {
+      /* use what's typed now so they can test before saving */
+      App.db.settings.waToken = (App.el('[name="waToken"]', view).value || '').trim();
+      App.db.settings.waPhoneId = (App.el('[name="waPhoneId"]', view).value || '').trim();
+      var out = App.el('#stwaresult', view);
+      out.textContent = 'Checking…'; out.style.color = 'var(--fg-3)';
+      waTest.disabled = true;
+      App.WA.testConnection().then(function (j) {
+        out.style.color = 'var(--accent)';
+        out.textContent = '✓ Connected' + (j.display_phone_number ? ' · ' + j.display_phone_number : '') + (j.verified_name ? ' (' + j.verified_name + ')' : '');
+      }).catch(function (e) {
+        out.style.color = 'var(--danger)'; out.textContent = '✗ ' + e.message;
+      }).then(function () { waTest.disabled = false; });
+    });
+
     wireHeaderCard(view);
     wireBackupCard(view);
 
@@ -11717,7 +11771,8 @@ Minimum version required to store current data is: `+i+`.
       var st = App.db.settings;
       if (!String(f.shopName || '').trim()) { App.toast('Shop name is required', 'err'); return; }
       ['shopName','ownerName','phone','altPhone','email','address','gstin',
-       'invoicePrefix','invoiceFooterNote','customerPrefix','skuPrefix'].forEach(function (k) {
+       'invoicePrefix','invoiceFooterNote','customerPrefix','skuPrefix',
+       'waToken','waPhoneId','waBillTemplate','waLang'].forEach(function (k) {
         if (f[k] !== undefined) st[k] = String(f[k]).trim();
       });
       st.invoiceNextNo = Math.max(1, Math.round(App.n(f.invoiceNextNo)) || 1);
@@ -12101,6 +12156,196 @@ Minimum version required to store current data is: `+i+`.
 })();
 
 
+/* ===== 60-whatsapp.js ===== */
+/* ============================================================================
+   60-whatsapp.js — WhatsApp Cloud API client (Online edition only).
+   The shop pastes an access token + phone-number ID in Settings; this sends
+   bills and campaign messages through Meta's WhatsApp Cloud API.
+
+   Notes / limits (Meta rules, not ours):
+   • Business-initiated messages outside the 24-hour customer window must use an
+     APPROVED template. Set a template name in Settings for reliable bill sends.
+   • Plain-text sends only work if the customer messaged you in the last 24h.
+   • Calls go straight to graph.facebook.com; if a device blocks that
+     (CORS), a small relay is needed — the error will say so.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var App = window.App;
+  var API = 'https://graph.facebook.com/v21.0';
+
+  /* true only on the Online edition */
+  App.isOnline = function () { return !!(App.license && App.license.online && App.license.online()); };
+
+  var WA = {};
+  App.WA = WA;
+
+  WA.config = function () {
+    var s = App.db && App.db.settings ? App.db.settings : {};
+    return { token: (s.waToken || '').trim(), phoneId: (s.waPhoneId || '').trim(),
+             template: (s.waBillTemplate || '').trim(), lang: (s.waLang || 'en').trim() };
+  };
+  WA.configured = function () { var c = WA.config(); return !!(c.token && c.phoneId); };
+
+  WA.toNumber = function (mobile) {
+    var s = App.db.settings || {};
+    var d = String(mobile || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.length <= 10) d = (s.whatsappCountryCode || '91') + d;   /* add country code for local numbers */
+    return d;
+  };
+
+  function parse(r) {
+    return r.json().catch(function () { return {}; }).then(function (j) {
+      if (!r.ok) { var e = new Error((j && j.error && j.error.message) || ('WhatsApp error ' + r.status)); e.data = j; throw e; }
+      return j;
+    });
+  }
+  function post(body) {
+    var c = WA.config();
+    return fetch(API + '/' + c.phoneId + '/messages', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + c.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(parse).catch(function (e) {
+      if (e instanceof TypeError) { var x = new Error('Could not reach WhatsApp. Check the internet, or this device may be blocking the request (a small relay would be needed).'); throw x; }
+      throw e;
+    });
+  }
+
+  WA.testConnection = function () {
+    var c = WA.config();
+    if (!c.token || !c.phoneId) return Promise.reject(new Error('Enter the access token and phone number ID first.'));
+    return fetch(API + '/' + c.phoneId + '?fields=verified_name,display_phone_number', { headers: { 'Authorization': 'Bearer ' + c.token } }).then(parse);
+  };
+
+  WA.sendText = function (to, body) {
+    return post({ messaging_product: 'whatsapp', to: WA.toNumber(to), type: 'text', text: { preview_url: false, body: body } });
+  };
+  WA.sendTemplate = function (to, name, lang, params) {
+    var components = (params && params.length) ? [{ type: 'body', parameters: params.map(function (p) { return { type: 'text', text: String(p) }; }) }] : [];
+    return post({ messaging_product: 'whatsapp', to: WA.toNumber(to), type: 'template', template: { name: name, language: { code: lang || 'en' }, components: components } });
+  };
+
+  WA.billText = function (sale) {
+    var s = App.db.settings || {};
+    var lines = (sale.items || []).map(function (i) { return '• ' + i.name + ' x' + App.n(i.qty) + '  ' + App.money(App.round2(i.qty * i.rate)); }).join('\n');
+    var t = (s.shopName || 'Our shop') + '\nBill ' + sale.invoiceNo + ' · ' + App.fmtDate(sale.date) + '\n\n' + lines + '\n\nTotal: ' + App.money(sale.total);
+    if (s.upiId) t += '\nPay by UPI: ' + s.upiId;
+    return t + '\n\nThank you!';
+  };
+
+  /* send one bill: template if set, otherwise plain text */
+  WA.sendBill = function (sale, to) {
+    var c = WA.config();
+    to = to || sale.customerMobile;
+    if (!to) return Promise.reject(new Error('No customer mobile number on this bill.'));
+    if (c.template) return WA.sendTemplate(to, c.template, c.lang, [(App.db.settings.shopName || ''), sale.invoiceNo, App.money(sale.total)]);
+    return WA.sendText(to, WA.billText(sale));
+  };
+})();
+
+
+/* ===== 61-campaigns.js ===== */
+/* ============================================================================
+   61-campaigns.js — WhatsApp campaigns (Online edition, route '/campaigns').
+   Pick a group of customers, write a message (or name an approved template),
+   and send to each through the WhatsApp Cloud API with a gentle throttle.
+   Meta requires an APPROVED template for marketing/business-initiated sends;
+   plain text only reaches customers who messaged you in the last 24 hours.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var App = window.App, M = App.M, UI = App.UI;
+
+  function recipients(kind) {
+    var all = M.customers().filter(function (c) { return (c.mobile || '').replace(/\D/g, ''); });
+    if (kind === 'due') { var owed = M.outstandingMap(); return all.filter(function (c) { return App.n(owed[c.id]) > 0.5; }); }
+    if (kind === 'recent') {
+      var cut = Date.now() - 30 * 86400000;
+      return all.filter(function (c) { var lv = M.customerStats(c.id).lastVisit; return lv && new Date(lv).getTime() >= cut; });
+    }
+    return all;
+  }
+  function personalize(text, c) {
+    return String(text || '').replace(/\{name\}/g, c.name || 'there').replace(/\{shop\}/g, App.db.settings.shopName || '');
+  }
+
+  UI.route('campaigns', function (view) {
+    if (!App.isOnline || !App.isOnline()) { UI.go('/pos'); return; }
+
+    var state = { kind: 'all', template: '', lang: App.db.settings.waLang || 'en', text: 'Hi {name}! ' };
+
+    function draw() {
+      var list = recipients(state.kind);
+      view.innerHTML =
+        '<div class="view-head"><div><h1>WhatsApp campaign</h1>' +
+          '<div class="sub">Send an offer or update to a group of customers</div></div></div>' +
+        (App.WA.configured() ? '' : '<div class="banner warn mb16">' + App.icon('alert', 20) + '<div class="tx">Add your WhatsApp Cloud API details in Settings first.</div></div>') +
+        '<div class="card card-pad">' +
+          '<div class="tiny b muted mb8">Who to send to</div>' +
+          '<div class="chips mb16" id="cmpwho">' +
+            chip('all', 'All customers') + chip('due', 'With dues') + chip('recent', 'Visited in 30 days') +
+          '</div>' +
+          '<div class="banner mb16">' + App.icon('users', 20) + '<div class="tx"><b>' + list.length + '</b> customer' + (list.length === 1 ? '' : 's') + ' with a mobile number will be messaged.</div></div>' +
+          UI.formHTML([
+            { k: 'cmptpl', label: 'Template name (recommended for campaigns)', value: state.template, help: 'An approved Meta template. Leave empty to send plain text (24h window only).' },
+            { k: 'cmplang', label: 'Template language', value: state.lang }
+          ], 2) +
+          '<div class="f mt12"><label>Message</label>' +
+            '<textarea id="cmptext" rows="4" style="width:100%;border-radius:11px;border:1px solid var(--border);background:var(--surface);padding:12px;color:var(--text)">' + App.esc(state.text) + '</textarea>' +
+            '<div class="help">Use {name} and {shop} — filled in for each customer. With a template, this text is sent as the first template value.</div></div>' +
+          '<div class="flex gap8 mt16"><button class="btn btn-primary" id="cmpsend"' + (list.length && App.WA.configured() ? '' : ' disabled') + '>' +
+            App.icon('chat', 18) + '<span>Send to ' + list.length + '</span></button></div>' +
+          '<div id="cmpprog" class="mt16"></div>' +
+        '</div>';
+
+      App.on(view, 'click', '#cmpwho [data-k]', function () { state.kind = this.getAttribute('data-k'); grab(); draw(); });
+      App.el('#cmpsend', view).addEventListener('click', function () { grab(); send(recipients(state.kind)); });
+    }
+    function chip(k, label) { return '<button class="chip ' + (state.kind === k ? 'on' : '') + '" data-k="' + k + '">' + label + '</button>'; }
+    function grab() {
+      var t = App.el('#cmptpl', view), l = App.el('#cmplang', view), x = App.el('#cmptext', view);
+      if (t) state.template = t.value.trim();
+      if (l) state.lang = l.value.trim() || 'en';
+      if (x) state.text = x.value;
+    }
+
+    function send(list) {
+      if (!list.length) return;
+      UI.confirm({ title: 'Send campaign?', message: 'This will message ' + list.length + ' customer' + (list.length === 1 ? '' : 's') + ' on WhatsApp. Only send to people who agreed to hear from you.', okLabel: 'Send' })
+        .then(function (ok) { if (ok) run(list); });
+    }
+    function run(list) {
+      var prog = App.el('#cmpprog', view);
+      var i = 0, sent = 0, failed = 0, errs = [];
+      App.el('#cmpsend', view).disabled = true;
+      function tick() {
+        prog.innerHTML = '<div class="banner"><div class="tx">Sending… <b>' + (i) + '</b> of ' + list.length +
+          '  ·  ✓ ' + sent + (failed ? '  ·  ✗ ' + failed : '') + '</div></div>';
+      }
+      function finish() {
+        prog.innerHTML = '<div class="banner ' + (failed ? 'warn' : 'ok') + '"><div class="tx">Done — sent <b>' + sent + '</b>' +
+          (failed ? ', ' + failed + ' failed' : '') + '.' + (errs.length ? '<br><span class="sm">' + App.esc(errs.slice(0, 5).join('; ')) + '</span>' : '') + '</div></div>';
+        App.el('#cmpsend', view).disabled = false;
+      }
+      function next() {
+        if (i >= list.length) { finish(); return; }
+        var c = list[i++]; tick();
+        var p = state.template
+          ? App.WA.sendTemplate(c.mobile, state.template, state.lang, [personalize(state.text, c)])
+          : App.WA.sendText(c.mobile, personalize(state.text, c));
+        p.then(function () { sent++; }).catch(function (e) { failed++; errs.push((c.name || c.mobile) + ': ' + e.message); })
+         .then(function () { setTimeout(next, 1100); });   /* ~1 msg/sec, gentle on the API */
+      }
+      next();
+    }
+
+    draw();
+  });
+})();
+
+
 /* ===== 99-boot.js ===== */
 /* =========================================================================
    99-boot.js — sidebar, global search, startup sequence
@@ -12116,6 +12361,7 @@ Minimum version required to store current data is: `+i+`.
     { k: 'dashboard', i: 'home', l: 'Dashboard' },
     { k: 'sale',      i: 'receipt', l: 'New Bill', href: '/sale/new' },
     { k: 'sales',     i: 'list', l: 'Sales / Invoices' },
+    { k: 'campaigns', i: 'chat', l: 'WhatsApp Campaigns', href: '/campaigns', when: function () { return App.isOnline && App.isOnline(); } },
     { k: 'payments',  i: 'wallet', l: 'Payments' },
     { k: 'expenses',  i: 'trendDown', l: 'Expenses' },
     { g: 'Records' },

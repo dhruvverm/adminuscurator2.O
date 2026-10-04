@@ -241,26 +241,26 @@ export const defaultProducts: Product[] = [
 const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.3";
 const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.3";
 const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.3";
-const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.4";
+const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.5";
 
 export const defaultSoftware: Software[] = [
   {
     id: "adminuscurator-pos",
     name: "Adminuscurator POS",
     description:
-      "A fast, offline point-of-sale for any shop or counter: tap or scan products into a cart and take payment in seconds. An optional restaurant/tables mode holds a separate order per table. Includes inventory, GST billing, customers, credit, expenses, reports and backup. Works on Android, Windows and Mac — no internet or account needed.",
+      "A fast, offline point-of-sale for any shop or counter: tap or scan products into a cart and take payment in seconds. An optional restaurant/tables mode holds a separate order per table. An Online edition unlocks WhatsApp auto-send of bills and campaigns. Includes inventory, GST billing, customers, credit, expenses, reports and backup. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "store",
-    version: "1.25.4",
+    version: "1.25.5",
     releaseDate: "2026-10-04",
-    mobileUrl: "/files/Adminuscurator-POS-1.25.4.apk",
-    mobileSize: "192 KB",
-    tabletUrl: "/files/Adminuscurator-POS-1.25.4.apk",
-    tabletSize: "192 KB",
+    mobileUrl: "/files/Adminuscurator-POS-1.25.5.apk",
+    mobileSize: "196 KB",
+    tabletUrl: "/files/Adminuscurator-POS-1.25.5.apk",
+    tabletSize: "196 KB",
     // Desktop installers — built by .github/workflows/pos-desktop.yml
-    windowsUrl: `${POS_RELEASE}/AdminuscuratorPOS-Setup-1.25.4.exe`,
+    windowsUrl: `${POS_RELEASE}/AdminuscuratorPOS-Setup-1.25.5.exe`,
     windowsSize: "106 MB",
-    macUrl: `${POS_RELEASE}/AdminuscuratorPOS-1.25.4-mac.dmg`,
+    macUrl: `${POS_RELEASE}/AdminuscuratorPOS-1.25.5-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,

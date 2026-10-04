@@ -9,4 +9,10 @@ contextBridge.exposeInMainWorld("LicenseAPI", {
   open: () => ipcRenderer.invoke("license:open"),
 });
 
-contextBridge.exposeInMainWorld("OpticalShopDesktop", { platform: process.platform, isDesktop: true });
+// Ask the main process which edition the active licence grants, so the app
+// can show the Online (WhatsApp) features. Synchronous so it is ready before
+// the app's own scripts run.
+let edition = null;
+try { edition = ipcRenderer.sendSync("license:edition-sync"); } catch (e) {}
+
+contextBridge.exposeInMainWorld("OpticalShopDesktop", { platform: process.platform, isDesktop: true, edition: edition });

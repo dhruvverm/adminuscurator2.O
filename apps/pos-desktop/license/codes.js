@@ -13,8 +13,8 @@ const SECRET = require("./secret");
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford base32 (no I,L,O,U)
 const ID_BYTES = 5; // 40 bits of randomness
 const CHECK_BYTES = 4;
-const KIND = { 0: "trial", 1: "lifetime" };
-const KIND_BYTE = { trial: 0, lifetime: 1 };
+const KIND = { 0: "trial", 1: "lifetime", 2: "online" };
+const KIND_BYTE = { trial: 0, lifetime: 1, online: 2 };
 
 function toBase32(buf) {
   let bits = 0, value = 0, out = "";
