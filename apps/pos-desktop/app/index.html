@@ -1331,6 +1331,26 @@ html[data-theme="dark"] .savebar .btn{background:#1a0d0d;color:#F87171;border-co
 .pos-more>summary::before{content:"+ ";font-weight:800}
 .pos-more[open]>summary::before{content:"– "}
 
+/* ===== Tables / restaurant mode (44b-tables.js) ======================== */
+.tbl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px}
+.tbl-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 12px;border:1.5px solid var(--border);border-radius:16px;background:var(--surface);cursor:pointer;transition:transform .08s ease,border-color .15s,box-shadow .15s;min-height:132px;justify-content:center}
+.tbl-card:hover{border-color:var(--primary);box-shadow:0 8px 22px -12px rgba(79,70,229,.5)}
+.tbl-card:active{transform:scale(.97)}
+.tbl-ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);font-size:20px;font-weight:800}
+.tbl-name{font-weight:700;color:var(--text)}
+.tbl-free{font-size:12px;font-weight:700;color:var(--fg-3);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 12px}
+.tbl-card.occ{border-color:var(--accent);background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 8%,var(--surface)),var(--surface))}
+.tbl-card.occ .tbl-ic{background:var(--accent);color:#fff}
+.tbl-amt{font-weight:800;font-size:18px;color:var(--text)}
+.tbl-badge{font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:20px;padding:1px 10px}
+
+/* POS: table context bar + hold button */
+.pos-tablebar{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border:0;border-bottom:1px solid var(--line);background:var(--primary-soft);color:var(--primary);font-weight:700;cursor:pointer}
+.pos-tablebar .dim{margin-left:auto;font-weight:600;font-size:12px;opacity:.8}
+.pos-hold{width:100%;height:44px;margin-bottom:8px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);font-weight:650;cursor:pointer}
+.pos-hold:hover{border-color:var(--primary);color:var(--primary)}
+.pos-hold:disabled{opacity:.5;cursor:not-allowed}
+
 </style>
 </head>
 <body>
@@ -2140,6 +2160,10 @@ Minimum version required to store current data is: `+i+`.
         upiId: '',
         upiName: '',
         receiptSize: 'a5',   /* a5 | thermal58 | thermal80 */
+        /* restaurant / tables mode */
+        tablesMode: false,
+        tableCount: 12,
+        takeawayOn: true,
         /* WhatsApp */
         whatsappCountryCode: '91',
         whatsappTemplate: '',
@@ -2168,6 +2192,7 @@ Minimum version required to store current data is: `+i+`.
       purchases: [],       /* {id,date,supplierId,billNo,items[],total,paid,method,notes,createdAt,deletedAt} */
       expenses: [],        /* {id,date,category,amount,method,description,notes,createdAt,deletedAt} */
       stockMoves: [],      /* audit ledger {id,date,productId,qty,type,refType,refId,note,createdAt} */
+      orders: [],          /* open/held table orders {id,table,lines[],customerId,customerName,note,createdAt,updatedAt} */
       backupsIndex: [],    /* {date,at,size,auto} — record of backups taken */
       trash: []            /* soft-deleted originals for restore */
     };
@@ -2218,8 +2243,8 @@ Minimum version required to store current data is: `+i+`.
    * ------------------------------------------------------------------ */
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   var LISTS = ['customers','prescriptions','suppliers','products','sales','payments',
-               'purchases','expenses','stockMoves','backupsIndex','trash'];
-  var NAMES = { customers: 'customer', prescriptions: 'prescription', suppliers: 'supplier', products: 'product',
+               'purchases','expenses','stockMoves','orders','backupsIndex','trash'];
+  var NAMES = { customers: 'customer', prescriptions: 'prescription', suppliers: 'supplier', orders: 'order', products: 'product',
                 sales: 'invoice', payments: 'payment', purchases: 'purchase', expenses: 'expense',
                 stockMoves: 'stock record', backupsIndex: 'backup record', trash: 'trash item' };
   var TEXT = {
@@ -8738,7 +8763,7 @@ Minimum version required to store current data is: `+i+`.
   var App = window.App, M = App.M, UI = App.UI;
 
   /* in-memory cart, kept across re-renders of the screen */
-  var C = { lines: [], customer: null, q: '', cat: '' };
+  var C = { lines: [], customer: null, q: '', cat: '', table: null };
 
   function taxOpts() {
     var s = App.db.settings;
@@ -8906,6 +8931,8 @@ Minimum version required to store current data is: `+i+`.
     }).join('');
 
     box.innerHTML =
+      (C.table ? '<button type="button" class="pos-tablebar" id="posback">' + App.icon('arrowLeft', 16) +
+          '<span>' + App.esc(tableName(C.table)) + '</span><span class="dim">Tables</span></button>' : '') +
       '<div class="pos-cart-head">' +
         '<button type="button" class="pos-cust" id="poscust">' + App.icon('user', 18) +
           '<span>' + (C.customer ? App.esc(C.customer.name) : 'Walk-in customer') + '</span></button>' +
@@ -8914,8 +8941,9 @@ Minimum version required to store current data is: `+i+`.
       '<div class="pos-lines">' + (hasItems ? rows : '<div class="pos-empty">' + App.icon('receipt', 30) + '<div>Tap a product to start a bill</div></div>') + '</div>' +
       '<div class="pos-foot">' +
         (c.taxAmount ? '<div class="pos-foot-r"><span>Tax (' + App.n(c.taxPercent) + '%)</span><span>' + App.money(c.taxAmount) + '</span></div>' : '') +
+        (C.table ? '<button type="button" class="pos-hold" id="poshold"' + (hasItems ? '' : ' disabled') + '>Hold order</button>' : '') +
         '<button type="button" class="pos-charge" id="poscharge"' + (hasItems ? '' : ' disabled') + '>' +
-          '<span class="pos-charge-l">Charge</span><span class="pos-charge-t">' + App.money(c.total) + '</span></button>' +
+          '<span class="pos-charge-l">' + (C.table ? 'Settle' : 'Charge') + '</span><span class="pos-charge-t">' + App.money(c.total) + '</span></button>' +
       '</div>';
 
     App.on(box, 'click', '[data-inc]', function () { setQty(+this.getAttribute('data-inc'), App.n(C.lines[+this.getAttribute('data-inc')].qty) + 1); });
@@ -8923,6 +8951,8 @@ Minimum version required to store current data is: `+i+`.
     var clr = App.el('#posclear', box); if (clr) clr.addEventListener('click', clearCart);
     App.el('#poscust', box).addEventListener('click', pickCustomer);
     var ch = App.el('#poscharge', box); if (ch) ch.addEventListener('click', charge);
+    var hold = App.el('#poshold', box); if (hold) hold.addEventListener('click', holdOrder);
+    var back = App.el('#posback', box); if (back) back.addEventListener('click', function () { holdOrder(true); });
 
     if (fab) {
       if (hasItems) { fab.hidden = false; fab.innerHTML = '<span>' + count() + ' item' + (count() === 1 ? '' : 's') + '</span><span>' + App.money(c.total) + ' · View cart</span>'; }
@@ -9060,16 +9090,50 @@ Minimum version required to store current data is: `+i+`.
   }
 
   function done(sale, print) {
+    var wasTable = C.table;
+    if (wasTable) M.orderRemove(wasTable);   /* a settled table is freed */
+    C.table = null;
     clearCart();
     App.store.saveNow();
     if (print) { App.printInvoice(sale.id); }
     else {
       App.toast('Bill ' + sale.invoiceNo + ' saved · ' + App.money(sale.total), 'ok', 4000);
     }
+    if (wasTable) { UI.go('/tables'); return; }
     /* back to a clean POS for the next customer */
     if (location.hash !== '#/pos') UI.go('/pos'); else { drawGrid(); drawCart(); }
     var q = App.el('#posq'); if (q) setTimeout(function () { q.focus(); }, 60);
   }
+
+  function tableName(t) { return t === 'takeaway' ? 'Takeaway' : ('Table ' + t); }
+
+  function holdOrder(fromBack) {
+    var t = C.table;
+    if (!t) { UI.go('/tables'); return; }
+    if (C.lines.length) M.orderUpsert(t, C.lines, { customerId: C.customer ? C.customer.id : '', customerName: C.customer ? C.customer.name : '' });
+    else M.orderRemove(t);
+    App.store.saveNow();
+    if (!fromBack) App.toast(tableName(t) + (C.lines.length ? ' held' : ' cleared'), 'ok', 2200);
+    C.table = null; C.lines = []; C.customer = null;
+    UI.go('/tables');
+  }
+
+  /* opened from the Tables screen */
+  App.POS = {
+    open: function (table) {
+      var o = M.orderFor(table);
+      C.table = table;
+      C.lines = (o && o.lines) ? o.lines.map(function (l) { return Object.assign({}, l); }) : [];
+      C.customer = (o && o.customerId) ? M.find('customers', o.customerId) : null;
+      UI.go('/pos');
+    },
+    held: function (table) {
+      var o = M.orderFor(table);
+      if (!o || !o.lines.length) return null;
+      return { count: o.lines.reduce(function (n, l) { return n + App.n(l.qty); }, 0), total: M.calcSale(o.lines, taxOpts()).total };
+    },
+    tableName: tableName
+  };
 })();
 
 
@@ -9276,6 +9340,82 @@ Minimum version required to store current data is: `+i+`.
     if (opts.customerId) open(M.find('customers', opts.customerId));
     else UI.pickCustomer(function (c) { if (c) open(c); }, { allowWalkIn: false });
   };
+})();
+
+
+/* ===== 44b-tables.js ===== */
+/* ============================================================================
+   44b-tables.js — optional restaurant / tables mode (route '/tables').
+   A grid of tables; tap one to take or resume its order on the POS screen.
+   Orders are "held" per table until settled. Enabled from Settings
+   (settings.tablesMode); when off, this route just redirects to /pos.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var App = window.App, M = App.M, UI = App.UI;
+
+  /* ---------- held-order model ---------- */
+  M.orders = function () { return (App.db.orders || []).slice(); };
+  M.orderFor = function (table) {
+    return (App.db.orders || []).filter(function (o) { return o.table === table; })[0] || null;
+  };
+  M.orderUpsert = function (table, lines, extra) {
+    extra = extra || {};
+    var clean = (lines || []).map(function (l) {
+      return { productId: l.productId || '', variantId: l.variantId || '', variantLabel: l.variantLabel || '',
+               name: l.name, rate: App.n(l.rate), qty: App.n(l.qty) };
+    });
+    var o = M.orderFor(table);
+    if (o) { o.lines = clean; o.customerId = extra.customerId || ''; o.customerName = extra.customerName || ''; o.updatedAt = App.nowISO(); }
+    else {
+      if (!App.db.orders) App.db.orders = [];
+      App.db.orders.push({ id: App.uid('ord'), table: table, lines: clean,
+        customerId: extra.customerId || '', customerName: extra.customerName || '',
+        createdAt: App.nowISO(), updatedAt: App.nowISO() });
+    }
+    App.store.touch();
+    return M.orderFor(table);
+  };
+  M.orderRemove = function (table) {
+    App.db.orders = (App.db.orders || []).filter(function (o) { return o.table !== table; });
+    App.store.touch();
+  };
+  M.tableList = function () {
+    var s = App.db.settings;
+    var n = Math.max(1, Math.min(200, App.n(s.tableCount) || 12));
+    var a = [];
+    for (var i = 1; i <= n; i++) a.push(String(i));
+    if (s.takeawayOn) a.push('takeaway');
+    return a;
+  };
+
+  /* ---------- the screen ---------- */
+  UI.route('tables', function (view) {
+    if (!App.db.settings.tablesMode) { UI.go('/pos'); return; }
+    var tables = M.tableList();
+    var busy = tables.filter(function (t) { return !!App.POS.held(t); }).length;
+
+    var html = '<div class="view-head"><div><h1>Tables</h1>' +
+      '<div class="sub">' + busy + ' running · tap a table to take its order</div></div>' +
+      '<div class="actions"><button class="btn btn-primary" id="tcounter">' + App.icon('store', 18) + '<span>Counter sale</span></button></div></div>';
+
+    html += '<div class="tbl-grid">' + tables.map(function (t) {
+      var held = App.POS.held(t);
+      var isTa = t === 'takeaway';
+      return '<button type="button" class="tbl-card' + (held ? ' occ' : '') + '" data-t="' + App.esc(t) + '">' +
+        '<span class="tbl-ic">' + (isTa ? App.icon('box', 22) : t) + '</span>' +
+        '<span class="tbl-name">' + App.esc(App.POS.tableName(t)) + '</span>' +
+        (held
+          ? '<span class="tbl-amt">' + App.money0(held.total) + '</span>' +
+            '<span class="tbl-badge">' + held.count + ' item' + (held.count === 1 ? '' : 's') + '</span>'
+          : '<span class="tbl-free">Free</span>') +
+      '</button>';
+    }).join('') + '</div>';
+
+    view.innerHTML = html;
+    App.on(view, 'click', '[data-t]', function () { App.POS.open(this.getAttribute('data-t')); });
+    App.el('#tcounter', view).addEventListener('click', function () { App.POS.open(null); });
+  });
 })();
 
 
@@ -11468,6 +11608,15 @@ Minimum version required to store current data is: `+i+`.
       '<div class="sm muted mt8">This is a simple lock to stop casual access. It does not encrypt your data.</div>' +
       '</div></div>';
 
+    html += '<div class="card"><div class="card-head"><h3>' + App.icon('box', 18) + '<span>Restaurant / Tables</span></h3></div><div class="card-body">' +
+      '<label class="switch mb8"><input type="checkbox" id="sttables" ' + (s.tablesMode ? 'checked' : '') + '>' +
+      '<span class="track"></span><span class="lb">Turn on tables mode</span></label>' +
+      '<div class="sm muted mb12">Adds a Tables screen — take and hold a separate order per table, then settle it.</div>' +
+      UI.formHTML([{ k: 'tableCount', label: 'Number of tables', type: 'number', value: s.tableCount, attrs: 'inputmode="numeric" step="1" min="1" max="200"' }]) +
+      '<label class="switch mt8"><input type="checkbox" id="sttakeaway" ' + (s.takeawayOn ? 'checked' : '') + '>' +
+      '<span class="track"></span><span class="lb">Show a Takeaway tile</span></label>' +
+      '</div></div>';
+
     html += '</div>';
 
     /* about */
@@ -11504,6 +11653,20 @@ Minimum version required to store current data is: `+i+`.
     App.el('#stdark', view).addEventListener('change', function () {
       App.db.settings.theme = this.checked ? 'dark' : 'light';
       App.store.touch(); UI.applyTheme();
+    });
+
+    var stTbl = App.el('#sttables', view);
+    if (stTbl) stTbl.addEventListener('change', function () {
+      App.db.settings.tablesMode = this.checked;
+      var tc = App.el('[name="tableCount"]', view);
+      if (tc) App.db.settings.tableCount = Math.max(1, Math.min(200, Math.round(App.n(tc.value)) || 12));
+      App.store.touch(); App.store.saveNow();
+      if (UI.rebuildShell) UI.rebuildShell();
+      App.toast(this.checked ? 'Tables mode is on' : 'Tables mode is off', 'ok', 2500);
+    });
+    var stTak = App.el('#sttakeaway', view);
+    if (stTak) stTak.addEventListener('change', function () {
+      App.db.settings.takeawayOn = this.checked; App.store.touch(); App.store.saveNow();
     });
 
     App.el('#stwapreset', view).addEventListener('click', function () {
@@ -11564,6 +11727,7 @@ Minimum version required to store current data is: `+i+`.
       st.taxInclusive = !!f.taxInclusive;
       st.taxPercentDefault = App.n(f.taxPercentDefault);
       st.lowStockGlobal = Math.max(0, Math.round(App.n(f.lowStockGlobal)));
+      if (f.tableCount !== undefined) st.tableCount = Math.max(1, Math.min(200, Math.round(App.n(f.tableCount)) || 12));
       st.keepBackups = Math.min(30, Math.max(3, Math.round(App.n(f.keepBackups)) || 10));
       st.keepBackupFiles = Math.min(60, Math.max(3, Math.round(App.n(f.keepBackupFiles)) || 14));
       st.whatsappCountryCode = String(f.whatsappCountryCode || '').replace(/\D/g, '') || '91';
@@ -11947,6 +12111,7 @@ Minimum version required to store current data is: `+i+`.
 
   var NAV = [
     { g: 'Daily work' },
+    { k: 'tables',    i: 'box', l: 'Tables', href: '/tables', when: function () { return App.db.settings.tablesMode; } },
     { k: 'pos',       i: 'store', l: 'POS · Sell', href: '/pos' },
     { k: 'dashboard', i: 'home', l: 'Dashboard' },
     { k: 'sale',      i: 'receipt', l: 'New Bill', href: '/sale/new' },
@@ -11990,6 +12155,7 @@ Minimum version required to store current data is: `+i+`.
     var s = App.db.settings;
     var nav = NAV.map(function (n) {
       if (n.g) return '<div class="nav-sec">' + App.esc(n.g) + '</div>';
+      if (n.when && !n.when()) return '';
       return '<button class="nav-item" data-nav="' + n.k + '" data-go="' + (n.href || '/' + n.k) + '">' +
         App.icon(n.i, 20) + '<span>' + App.esc(n.l) + '</span>' +
         (n.badge ? '<span class="badge" style="display:none">0</span>' : '') + '</button>';
@@ -12033,6 +12199,10 @@ Minimum version required to store current data is: `+i+`.
 
     wireSearch();
   }
+
+  /* Rebuild the shell (nav etc.) and repaint — used when a setting changes
+     the menu, e.g. turning tables mode on or off. */
+  UI.rebuildShell = function () { buildShell(); UI.render(); };
 
   function wireSearch() {
     var input = App.el('#gsearch');
@@ -12129,7 +12299,7 @@ Minimum version required to store current data is: `+i+`.
         setTimeout(function () { App.toast('Some damaged records were repaired automatically', 'warn', 6000); }, 900);
       }
 
-      if (!location.hash) location.hash = '/pos';
+      if (!location.hash) location.hash = App.db.settings.tablesMode ? '/tables' : '/pos';
       UI.render();
 
       if (App.migrated) App.store.saveNow();   /* keep an upgraded file upgraded */
