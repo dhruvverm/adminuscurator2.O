@@ -9144,8 +9144,8 @@ Minimum version required to store current data is: `+i+`.
     else {
       App.toast('Bill ' + sale.invoiceNo + ' saved · ' + App.money(sale.total), 'ok', 4000);
     }
-    /* Online edition: send the bill straight to the customer's WhatsApp */
-    if (App.isOnline && App.isOnline() && App.WA && App.WA.configured() && sale.customerMobile) {
+    /* WhatsApp set up: send the bill straight to the customer's WhatsApp */
+    if (App.WA && App.WA.configured() && sale.customerMobile) {
       App.toast('Sending bill on WhatsApp…', 'ok', 2000);
       App.WA.sendBill(sale).then(function () { App.toast('Bill sent on WhatsApp ✓', 'ok', 3000); })
         .catch(function (e) { App.toast('WhatsApp: ' + e.message, 'err', 6000); });
@@ -11642,8 +11642,8 @@ Minimum version required to store current data is: `+i+`.
         App.icon('restore', 16) + '<span>Use the default message</span></button></div>' +
       '</div></div>';
 
-    if (App.isOnline && App.isOnline()) {
-      html += '<div class="card"><div class="card-head"><h3>' + App.icon('chat', 18) + '<span>WhatsApp auto-send &amp; campaigns · Online</span></h3></div><div class="card-body">' +
+    {
+      html += '<div class="card"><div class="card-head"><h3>' + App.icon('chat', 18) + '<span>WhatsApp auto-send &amp; campaigns</span></h3></div><div class="card-body">' +
         '<div class="sm muted mb12">Paste your WhatsApp Cloud API details once to send bills and run campaigns automatically. Needs a Meta WhatsApp Business account with your number on the Cloud API (and approved templates for campaigns). Your token stays on this device.</div>' +
         UI.formHTML([
           { k: 'waPhoneId', label: 'Phone number ID', value: s.waPhoneId || '', help: 'Meta → WhatsApp → API setup' },
@@ -11834,7 +11834,9 @@ Minimum version required to store current data is: `+i+`.
       App.store.saveNow().then(function () {
         App.toast('Settings saved', 'ok');
         UI.renderShopHeader();
-        UI.render();
+        /* WhatsApp/relay config can add or remove menu items — rebuild the nav */
+        if (UI.rebuildShell) UI.rebuildShell(); else UI.render();
+        if (App.OO && App.OO.startPoll) App.OO.startPoll();
       });
     });
   });
@@ -12307,7 +12309,6 @@ Minimum version required to store current data is: `+i+`.
   }
 
   UI.route('campaigns', function (view) {
-    if (!App.isOnline || !App.isOnline()) { UI.go('/pos'); return; }
 
     var state = { kind: 'all', template: '', lang: App.db.settings.waLang || 'en', text: 'Hi {name}! ' };
 
@@ -12488,7 +12489,6 @@ Minimum version required to store current data is: `+i+`.
   var timer = null;
   OO.startPoll = function () {
     if (timer) return;
-    if (!App.isOnline || !App.isOnline()) return;
     if (!(App.db.settings.ordersSyncUrl || '').trim()) return;
     var run = function () {
       OO.sync().then(function (r) {
@@ -12505,7 +12505,6 @@ Minimum version required to store current data is: `+i+`.
 
   /* ---------- screen ---------- */
   UI.route('online-orders', function (view) {
-    if (!App.isOnline || !App.isOnline()) { UI.go('/pos'); return; }
     OO.startPoll();
     var orders = M.onlineOrders();
     var configured = !!(App.db.settings.ordersSyncUrl || '').trim();
@@ -12608,8 +12607,8 @@ Minimum version required to store current data is: `+i+`.
     { k: 'dashboard', i: 'home', l: 'Dashboard' },
     { k: 'sale',      i: 'receipt', l: 'New Bill', href: '/sale/new' },
     { k: 'sales',     i: 'list', l: 'Sales / Invoices' },
-    { k: 'online-orders', i: 'truck', l: 'Online Orders', href: '/online-orders', badge: true, when: function () { return App.isOnline && App.isOnline(); } },
-    { k: 'campaigns', i: 'chat', l: 'WhatsApp Campaigns', href: '/campaigns', when: function () { return App.isOnline && App.isOnline(); } },
+    { k: 'online-orders', i: 'truck', l: 'Online Orders', href: '/online-orders', badge: true, when: function () { return !!(App.db.settings.ordersSyncUrl || '').trim() || !!App.db.settings.tablesMode; } },
+    { k: 'campaigns', i: 'chat', l: 'WhatsApp Campaigns', href: '/campaigns', when: function () { return !!(App.WA && App.WA.configured()); } },
     { k: 'payments',  i: 'wallet', l: 'Payments' },
     { k: 'expenses',  i: 'trendDown', l: 'Expenses' },
     { g: 'Records' },
