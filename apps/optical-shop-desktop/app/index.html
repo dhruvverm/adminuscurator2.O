@@ -175,8 +175,8 @@ a:hover{text-decoration:underline}
   background-image:linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,0) 60%);
   color:var(--shop-fg);
 }
-.sh-logo{width:44px;height:44px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
-.sh-logo img{width:100%;height:100%;object-fit:contain;padding:4px}
+.sh-logo{width:44px;height:44px;border-radius:12px;background:transparent;display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
+.sh-logo img{width:100%;height:100%;object-fit:contain}
 .sh-logo.no-img{background:transparent;box-shadow:inset 0 0 0 2px currentColor}
 .sh-text{min-width:0}
 .sh-title{font-size:22px;font-weight:750;letter-spacing:-.01em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1237,7 +1237,24 @@ html[data-theme="dark"] .savebar .btn{background:#1a0d0d;color:#F87171;border-co
   .tour-ft{flex-wrap:wrap}
   .tour-dots{order:3;width:100%;margin:4px 0 0;justify-content:center}
 }
-
+/* ===== Large & simple view (settings.simpleMode) =======================
+   One toggle scales the whole UI: bigger type tokens + bigger tap targets.
+   Because the app is token-driven, most of this is just overriding tokens. */
+html[data-ui="simple"]{
+  --t-xs:14px; --t-sm:15px; --t-md:17px; --t-base:19px;
+  --t-lg:22px; --t-xl:27px; --t-2xl:33px; --t-3xl:40px;
+  --tap:56px;
+}
+html[data-ui="simple"] body{line-height:1.6}
+html[data-ui="simple"] .btn{min-height:54px;padding:0 var(--s5);font-size:var(--t-md)}
+html[data-ui="simple"] .btn-sm{min-height:46px;font-size:var(--t-sm)}
+html[data-ui="simple"] .btn-lg{min-height:66px;font-size:var(--t-lg)}
+html[data-ui="simple"] .btn-icon{min-height:54px;width:54px}
+html[data-ui="simple"] .btn-sm.btn-icon{min-height:46px;width:46px}
+html[data-ui="simple"] .nav-item{min-height:56px;font-size:var(--t-base)}
+html[data-ui="simple"] .search input{height:56px}
+html[data-ui="simple"] .view-head .actions .btn{min-height:54px}
+html[data-ui="simple"] table.tbl td,html[data-ui="simple"] table.tbl th{padding-top:14px;padding-bottom:14px}
 </style>
 </head>
 <body>
@@ -1256,7 +1273,7 @@ html[data-theme="dark"] .savebar .btn{background:#1a0d0d;color:#F87171;border-co
 var App = window.App || {};
 window.App = App;
 
-App.APP_VERSION = '1.25.0';
+App.APP_VERSION = '1.26.0';
 App.SCHEMA_VERSION = 2;   /* bump when data shape changes; see 10-store migrations */
 
 /* ---------- ids ---------- */
@@ -2033,6 +2050,7 @@ Minimum version required to store current data is: `+i+`.
         rxPadding: 4,
         /* app prefs */
         theme: 'light',
+        simpleMode: false,         /* "Large & simple" view: bigger text + buttons */
         lowStockGlobal: 3,
         autoBackup: true,
         backupEvery: 'day',        /* hour1 | hour2 | hour4 | hour12 | day | week */
@@ -2065,7 +2083,7 @@ Minimum version required to store current data is: `+i+`.
       counters: { stockMove: 1 },
 
       customers: [],       /* {id,code,name,mobile,altMobile,address,dob,email,notes,createdAt,updatedAt,deletedAt} */
-      prescriptions: [],   /* {id,customerId,date,doctor,od:{sph,cyl,axis,add,pd},os:{...},
+      prescriptions: [],   /* {id,customerId,date,doctor,od:{sph,cyl,axis,add,pd,va},os:{...},
                               cl:{od:{sph,cyl,axis,bc,dia},os:{...},brand} or absent,
                               notes,image,followUpDate,createdAt,deletedAt} */
       suppliers: [],       /* {id,name,phone,email,address,gstin,notes,createdAt,deletedAt} */
@@ -2206,7 +2224,7 @@ Minimum version required to store current data is: `+i+`.
               pr.doctor = pr.doctor === undefined || pr.doctor === null ? '' : String(pr.doctor);
               ['od','os'].forEach(function (eye) {
                 var e = isObj(pr[eye]) ? pr[eye] : {};
-                ['sph','cyl','axis','add','pd'].forEach(function (f) { e[f] = e[f] === undefined || e[f] === null ? '' : String(e[f]); });
+                ['sph','cyl','axis','add','pd','va'].forEach(function (f) { e[f] = e[f] === undefined || e[f] === null ? '' : String(e[f]); });
                 pr[eye] = e;
               });
               pr.cl = cleanCl(pr.cl);
@@ -2217,7 +2235,7 @@ Minimum version required to store current data is: `+i+`.
         if (k === 'prescriptions') {
           ['od','os'].forEach(function (eye) {
             var e = isObj(x[eye]) ? x[eye] : {};
-            ['sph','cyl','axis','add','pd'].forEach(function (f) { e[f] = e[f] === undefined || e[f] === null ? '' : String(e[f]); });
+            ['sph','cyl','axis','add','pd','va'].forEach(function (f) { e[f] = e[f] === undefined || e[f] === null ? '' : String(e[f]); });
             x[eye] = e;
           });
           x.cl = cleanCl(x.cl);
@@ -2827,7 +2845,7 @@ Minimum version required to store current data is: `+i+`.
      ========================================================= */
   function eyeClean(e) {
     e = e || {};
-    return { sph: e.sph || '', cyl: e.cyl || '', axis: e.axis || '', add: e.add || '', pd: e.pd || '' };
+    return { sph: e.sph || '', cyl: e.cyl || '', axis: e.axis || '', add: e.add || '', pd: e.pd || '', va: e.va || '' };
   }
 
   /* Contact lens power. Kept only when something was actually filled in, so the
@@ -2904,7 +2922,7 @@ Minimum version required to store current data is: `+i+`.
   M.rxSnapshot = function (rx) {
     if (!rx || typeof rx !== 'object') return null;
     var str = function (v) { return v === undefined || v === null ? '' : String(v); };
-    var eye = function (e) { e = e || {}; return { sph: str(e.sph), cyl: str(e.cyl), axis: str(e.axis), add: str(e.add), pd: str(e.pd) }; };
+    var eye = function (e) { e = e || {}; return { sph: str(e.sph), cyl: str(e.cyl), axis: str(e.axis), add: str(e.add), pd: str(e.pd), va: str(e.va) }; };
     var snap = { code: str(rx.code), date: typeof rx.date === 'string' ? rx.date : '', doctor: str(rx.doctor),
       followUpDate: typeof rx.followUpDate === 'string' ? rx.followUpDate : '', od: eye(rx.od), os: eye(rx.os) };
     if (M.hasCl(rx)) {
@@ -4027,6 +4045,8 @@ Minimum version required to store current data is: `+i+`.
   UI.applyTheme = function () {
     var t = App.db.settings.theme || 'light';
     document.documentElement.setAttribute('data-theme', t);
+    if (App.db.settings.simpleMode) document.documentElement.setAttribute('data-ui', 'simple');
+    else document.documentElement.removeAttribute('data-ui');
     var mt = App.el('meta[name="theme-color"]');
     if (mt) mt.setAttribute('content', t === 'dark' ? '#0e1420' : '#f4f6fa');
   };
@@ -4570,21 +4590,22 @@ Minimum version required to store current data is: `+i+`.
       var eye = function (label, v) {
         v = v || {};
         return '<tr><td>' + label + '</td><td>' + (App.pw(v.sph) || '—') + '</td><td>' + (App.pw(v.cyl) || '—') + '</td>' +
-          '<td>' + e(v.axis || '—') + '</td><td>' + (App.pw(v.add) || '—') + '</td><td>' + e(v.pd || '—') + '</td></tr>';
+          '<td>' + e(v.axis || '—') + '</td><td>' + (App.pw(v.add) || '—') + '</td><td>' + e(v.pd || '—') + '</td>' +
+          '<td>' + e(v.va || '—') + '</td></tr>';
       };
       var clEye = function (label, v) {
         v = v || {};
         return '<tr><td>' + label + '</td><td>' + (App.pw(v.sph) || '—') + '</td><td>' + (App.pw(v.cyl) || '—') + '</td>' +
-          '<td>' + e(v.axis || '—') + '</td><td>' + e(v.bc || '—') + '</td><td>' + e(v.dia || '—') + '</td></tr>';
+          '<td>' + e(v.axis || '—') + '</td><td>' + e(v.bc || '—') + '</td><td>' + e(v.dia || '—') + '</td><td></td></tr>';
       };
       h += '<section class="iv-rx"><div class="iv-sectitle">' + App.icon('eye', 16) + '<span>Eye prescription</span>' +
           '<small>' + [rx.code ? e(rx.code) : '', rx.date ? App.fmtDate(rx.date) : '', rx.doctor ? 'Dr. ' + e(rx.doctor) : '',
             rx.followUpDate ? 'Next check-up ' + App.fmtDate(rx.followUpDate) : ''].filter(Boolean).join(' · ') + '</small></div>' +
         (M.hasCl(rx) ? '<div class="iv-rxsub">Spectacles</div>' : '') +
-        '<table><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th></tr></thead>' +
+        '<table><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th><th>VA</th></tr></thead>' +
         '<tbody>' + eye('Right eye (OD)', rx.od) + eye('Left eye (OS)', rx.os) + '</tbody></table>' +
         (M.hasCl(rx) ? '<div class="iv-rxsub">Contact lens' + (rx.cl.brand ? ' · ' + e(rx.cl.brand) : '') + '</div>' +
-          '<table><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>BC</th><th>DIA</th></tr></thead>' +
+          '<table><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>BC</th><th>DIA</th><th></th></tr></thead>' +
           '<tbody>' + clEye('Right eye (OD)', rx.cl.od) + clEye('Left eye (OS)', rx.cl.os) + '</tbody></table>' : '') +
         '</section>';
     }
@@ -4966,24 +4987,24 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       var rxMeta = [rx.code || '', rx.date ? App.fmtDate(rx.date) : '', rx.doctor ? 'Dr. ' + rx.doctor : '',
         rx.followUpDate ? 'Next ' + App.fmtDate(rx.followUpDate) : ''].filter(Boolean).join('  ·  ');
       if (rxMeta) { font(ctx, '600', 21); ctx.fillStyle = C.mute; ctx.textAlign = 'right'; ctx.fillText(fit(ctx, rxMeta, 580), R - 28, y + 47); }
-      var c0 = P + 330, cwid = (R - 28 - c0) / 5;
+      var c0 = P + 300, cwid = (R - 28 - c0) / 6, clWid = (R - 28 - c0) / 5;
       ctx.textAlign = 'center';
-      ['SPH', 'CYL', 'AXIS', 'ADD', 'PD'].forEach(function (t, i) { label(ctx, t, c0 + cwid * (i + 0.5), y + 100); });
+      ['SPH', 'CYL', 'AXIS', 'ADD', 'PD', 'VA'].forEach(function (t, i) { label(ctx, t, c0 + cwid * (i + 0.5), y + 100); });
       [['Right eye (OD)', rx.od], ['Left eye (OS)', rx.os]].forEach(function (row, ri) {
         var ry = y + 118 + ri * 72, v = row[1] || {};
         rr(ctx, P + 20, ry, IW - 40, 60, 16); ctx.fillStyle = '#FFFFFF'; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = C.line; ctx.stroke();
         ctx.textAlign = 'left'; font(ctx, '800', 24); ctx.fillStyle = C.navy; ctx.fillText(row[0], P + 44, ry + 39);
         font(ctx, '600', 26); ctx.fillStyle = C.ink; ctx.textAlign = 'center';
-        [App.pw(v.sph) || '—', App.pw(v.cyl) || '—', v.axis || '—', App.pw(v.add) || '—', v.pd || '—']
-          .forEach(function (val, i) { ctx.fillText(fit(ctx, String(val), cwid - 12), c0 + cwid * (i + 0.5), ry + 40); });
+        [App.pw(v.sph) || '—', App.pw(v.cyl) || '—', v.axis || '—', App.pw(v.add) || '—', v.pd || '—', v.va || '—']
+          .forEach(function (val, i) { ctx.fillText(fit(ctx, String(val), cwid - 10), c0 + cwid * (i + 0.5), ry + 40); });
       });
       if (hasCl) {
         ctx.textAlign = 'left'; font(ctx, '800', 19); spacing(ctx, 2); ctx.fillStyle = C.navy;
         ctx.fillText('CONTACT LENS', P + 44, y + 288);
         spacing(ctx, 0);
         ctx.textAlign = 'center';
-        ['SPH', 'CYL', 'AXIS', 'BC', 'DIA'].forEach(function (t, i) { label(ctx, t, c0 + cwid * (i + 0.5), y + 288); });
+        ['SPH', 'CYL', 'AXIS', 'BC', 'DIA'].forEach(function (t, i) { label(ctx, t, c0 + clWid * (i + 0.5), y + 288); });
         [['Right eye (OD)', rx.cl.od], ['Left eye (OS)', rx.cl.os]].forEach(function (row, ri) {
           var ry = y + 306 + ri * 72, v = row[1] || {};
           rr(ctx, P + 20, ry, IW - 40, 60, 16); ctx.fillStyle = '#FFFFFF'; ctx.fill();
@@ -4991,7 +5012,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           ctx.textAlign = 'left'; font(ctx, '800', 24); ctx.fillStyle = C.navy; ctx.fillText(row[0], P + 44, ry + 39);
           font(ctx, '600', 26); ctx.fillStyle = C.ink; ctx.textAlign = 'center';
           [App.pw(v.sph) || '—', App.pw(v.cyl) || '—', v.axis || '—', v.bc || '—', v.dia || '—']
-            .forEach(function (val, i) { ctx.fillText(fit(ctx, String(val), cwid - 12), c0 + cwid * (i + 0.5), ry + 40); });
+            .forEach(function (val, i) { ctx.fillText(fit(ctx, String(val), clWid - 12), c0 + clWid * (i + 0.5), ry + 40); });
         });
         if (clBrand) {
           ctx.textAlign = 'left'; font(ctx, '600', 23); ctx.fillStyle = C.mute;
@@ -6067,6 +6088,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
   /* the customer's bills, newest first — used on the page and in the Invoices tab */
   function salesTable(sales) {
+    sales = (sales || []).filter(function (s) { return s.status !== 'cancelled'; });
     return '<div class="tablewrap"><table class="tbl"><thead><tr>' +
       '<th>Invoice</th><th>Date</th><th>Items</th><th class="right">Total</th><th class="right">Paid</th><th class="right">Due</th><th></th>' +
       '</tr></thead><tbody>' + sales.slice().sort(function (a, b) {
@@ -6089,7 +6111,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
   function powerText(e) {
     e = e || {};
     var main = (App.pw(e.sph) || '—') + (e.cyl ? ' / ' + App.pw(e.cyl) : '') + (e.axis ? ' × ' + App.esc(e.axis) : '');
-    var extra = [e.add ? 'Add ' + App.pw(e.add) : '', e.pd ? 'PD ' + App.esc(e.pd) : ''].filter(Boolean).join(' · ');
+    var extra = [e.add ? 'Add ' + App.pw(e.add) : '', e.pd ? 'PD ' + App.esc(e.pd) : '',
+      e.va ? 'VA ' + App.esc(e.va) : ''].filter(Boolean).join(' · ');
     return main + (extra ? ' <span class="rx-x dim tiny">' + extra + '</span>' : '');
   }
 
@@ -6137,7 +6160,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       '<td class="num" style="padding:9px">' + (App.pw(e.cyl) || '—') + '</td>' +
       '<td class="num" style="padding:9px">' + App.esc(e.axis || '—') + '</td>' +
       '<td class="num" style="padding:9px">' + (App.pw(e.add) || '—') + '</td>' +
-      '<td class="num" style="padding:9px">' + App.esc(e.pd || '—') + '</td></tr>';
+      '<td class="num" style="padding:9px">' + App.esc(e.pd || '—') + '</td>' +
+      '<td class="num" style="padding:9px">' + App.esc(e.va || '—') + '</td></tr>';
   }
 
   function clRow(lbl, e) {
@@ -6164,7 +6188,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         '<button class="btn btn-sm" data-rxdel="' + rx.id + '">' + App.icon('trash', 18) + '<span>Delete</span></button>' +
       '</div>' +
       (M.hasCl(rx) ? '<div class="tiny b muted" style="padding:10px 13px 0">SPECTACLES</div>' : '') +
-      '<div class="scroll-x"><table class="rx"><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th></tr></thead>' +
+      '<div class="scroll-x"><table class="rx"><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th><th>VA</th></tr></thead>' +
       '<tbody>' + eyeRow('R (OD)', rx.od) + eyeRow('L (OS)', rx.os) + '</tbody></table></div>' +
       (M.hasCl(rx) ?
         '<div class="tiny b muted" style="padding:12px 13px 0;border-top:1px solid var(--border)">CONTACT LENS' +
@@ -6195,7 +6219,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     }
     function row(lbl, eye, e) {
       return '<tr><td>' + lbl + '</td>' + inp(eye, 'sph', e.sph) + inp(eye, 'cyl', e.cyl) +
-        inp(eye, 'axis', e.axis) + inp(eye, 'add', e.add) + inp(eye, 'pd', e.pd) + '</tr>';
+        inp(eye, 'axis', e.axis) + inp(eye, 'add', e.add) + inp(eye, 'pd', e.pd) + inp(eye, 'va', e.va) + '</tr>';
     }
     function clRowIn(lbl, eye, e) {
       e = e || {};
@@ -6204,8 +6228,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     }
 
     var body =
-      '<div class="scroll-x"><table class="rx"><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th></tr></thead>' +
+      '<div class="scroll-x"><table class="rx"><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th><th>VA</th></tr></thead>' +
       '<tbody>' + row('R (OD)', 'od', od) + row('L (OS)', 'os', os) + '</tbody></table></div>' +
+      '<div class="help">VA is what the customer can read — 6/6, 6/9, N6.</div>' +
       (prev ? '<div class="banner mt12">' + App.icon('info', 20) + '<div class="tx">Previous prescription (' + App.fmtDate(prev.date) + ') has been copied in — change it if needed</div></div>' : '') +
       '<label class="switch mt16"><input type="checkbox" name="clOn" id="rxclon"' + (clOn ? ' checked' : '') + '>' +
         '<span class="track"></span><span class="lb">Contact lens power</span></label>' +
@@ -6247,8 +6272,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
               notes: d.notes,
               followUpDate: d.followUpDate,
               image: imageData,
-              od: { sph: d.od_sph, cyl: d.od_cyl, axis: d.od_axis, add: d.od_add, pd: d.od_pd },
-              os: { sph: d.os_sph, cyl: d.os_cyl, axis: d.os_axis, add: d.os_add, pd: d.os_pd },
+              od: { sph: d.od_sph, cyl: d.od_cyl, axis: d.od_axis, add: d.od_add, pd: d.od_pd, va: d.od_va },
+              os: { sph: d.os_sph, cyl: d.os_cyl, axis: d.os_axis, add: d.os_add, pd: d.os_pd, va: d.os_va },
               cl: d.clOn ? {
                 od: { sph: d.clod_sph, cyl: d.clod_cyl, axis: d.clod_axis, bc: d.clod_bc, dia: d.clod_dia },
                 os: { sph: d.clos_sph, cyl: d.clos_cyl, axis: d.clos_axis, bc: d.clos_bc, dia: d.clos_dia },
@@ -6319,7 +6344,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var s = App.db.settings;
     function r(lbl, e) {
       return '<tr><td><b>' + lbl + '</b></td><td class="num">' + (App.pw(e.sph) || '—') + '</td><td class="num">' + (App.pw(e.cyl) || '—') +
-        '</td><td class="num">' + App.esc(e.axis || '—') + '</td><td class="num">' + (App.pw(e.add) || '—') + '</td><td class="num">' + App.esc(e.pd || '—') + '</td></tr>';
+        '</td><td class="num">' + App.esc(e.axis || '—') + '</td><td class="num">' + (App.pw(e.add) || '—') + '</td><td class="num">' + App.esc(e.pd || '—') +
+        '</td><td class="num">' + App.esc(e.va || '—') + '</td></tr>';
     }
     function cr(lbl, e) {
       e = e || {};
@@ -6336,7 +6362,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       '<table><tr><td style="width:50%"><b>Name:</b> ' + App.esc(c ? c.name : '') + '<br><b>ID:</b> ' + App.esc(c ? c.code : '') + '</td>' +
       '<td><b>Mobile:</b> ' + App.esc(c ? c.mobile : '') + '<br><b>Doctor:</b> ' + App.esc(rx.doctor || '—') + '</td></tr></table>' +
       (M.hasCl(rx) ? '<p style="margin:10px 0 2px"><b>Spectacles</b></p>' : '') +
-      '<table><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th></tr></thead>' +
+      '<table><thead><tr><th></th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>PD</th><th>VA</th></tr></thead>' +
       '<tbody>' + r('Right (OD)', rx.od) + r('Left (OS)', rx.os) + '</tbody></table>' +
       (M.hasCl(rx) ?
         '<p style="margin:14px 0 2px"><b>Contact lens</b>' + (rx.cl.brand ? ' — ' + App.esc(rx.cl.brand) : '') + '</p>' +
@@ -6421,11 +6447,12 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var note = '';
     /* a note after the power — '(-0.75)', '( CL SPH-2.00)' — or the vision '6/9' */
     s = s.replace(/\s*\(([^)]*)\)\s*$/, function (m0, inner) { note = clean(inner); return ''; });
-    s = s.replace(/\s+(\d\/\d{1,2}P?)$/, function (m0, v) { note = (note ? note + ' · ' : '') + 'Vision ' + v; return ''; });
+    var va = '';
+    s = s.replace(/\s+(\d\/\d{1,2}P?)$/, function (m0, v) { va = v; return ''; });
     s = s.replace(/\s*\/\s*NIL$/, '');
     var eye = '', m = s.match(/^(RE|LE|R|L)(?![A-Z])\s*[:.]?\s*/);
     if (m) { eye = m[1].charAt(0); s = s.slice(m[0].length); }
-    if (!s || /^(NIL|NA|X+|-+|\.+)$/.test(s)) return { eye: eye, empty: true, note: note };
+    if (!s || /^(NIL|NA|X+|-+|\.+)$/.test(s)) return { eye: eye, empty: true, note: note, va: va };
     var p = s.match(POWER_RE);
     if (!p || (!p[1] && !p[2] && !p[3])) return null;
     if (!p[1] && !/[.+-]/.test((p[2] || '') + (p[3] || ''))) return null;   /* '6/9' is vision, not a power */
@@ -6435,7 +6462,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     if (axis && !cyl && sph) { cyl = sph; sph = '0.00'; }
     if (cyl === '0.00') { cyl = ''; axis = ''; }
     if (!sph && cyl) sph = '0.00';
-    return { eye: eye, sph: sph, cyl: cyl, axis: axis, note: note };
+    return { eye: eye, sph: sph, cyl: cyl, axis: axis, note: note, va: va };
   }
 
   /* 'ADD+2.25 BE' · 'ADD 2.50 RE/ LE 2.00' · 'ADD R+2.00/L+2.25' -> { od, os } */
@@ -6486,7 +6513,11 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       else if (!(p2 && p2.empty)) rec.rxNotes.push(addRaw);
     }
     var vision = cell(5);
-    if (vision) rec.rxNotes.unshift('Vision ' + vision);
+    if (vision) {
+      var seen = readVision(vision);
+      if (seen.od || seen.os) { rec.va = seen; if (seen.rest) rec.rxNotes.unshift('Vision ' + seen.rest); }
+      else rec.rxNotes.unshift('Vision ' + vision);
+    }
 
     var visit = cell(6), details = cell(7);
     var found = parseDates(visit);
@@ -6543,7 +6574,26 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     }
     return '';
   }
-  function eyeObj(p, add) { return { sph: p ? p.sph : '', cyl: p ? p.cyl : '', axis: p ? p.axis : '', add: add || '', pd: '' }; }
+  /* what the customer can read, as the register writes it: "6/9", "R 6/6 L 6/9", "6/6 BE" */
+  function readVision(raw) {
+    var t = up(raw).replace(/\s+/g, ' ').trim(), out = { od: '', os: '', rest: '' };
+    var VA = '(\\d{1,2}\\s*\\/\\s*\\d{1,3}\\s*P?|N\\s*\\d{1,2})';
+    var both = new RegExp('^' + VA + '(?:\\s*(?:BE|B\\/E|OU|BOTH))?$').exec(t);
+    if (both) { out.od = out.os = clean(both[1]).replace(/\s+/g, ''); return out; }
+    var m = new RegExp('(RE|LE|R|L)\\s*[:.\\-]?\\s*' + VA, 'g'), hit, used = '';
+    while ((hit = m.exec(t))) {
+      var v = clean(hit[2]).replace(/\s+/g, '');
+      if (hit[1].charAt(0) === 'R') out.od = v; else out.os = v;
+      used += hit[0] + ' ';
+    }
+    if (out.od || out.os) out.rest = clean(t.replace(/\s+/g, ' ').split(' ').filter(function (w) { return used.indexOf(w) < 0; }).join(' '));
+    return out;
+  }
+
+  function eyeObj(p, add, va) {
+    return { sph: p ? p.sph : '', cyl: p ? p.cyl : '', axis: p ? p.axis : '', add: add || '', pd: '',
+      va: (p && p.va) || va || '' };
+  }
   function rxKey(date, od, os) {
     od = od || {}; os = os || {};
     return [date, od.sph, od.cyl, od.axis, od.add, os.sph, os.cyl, os.axis, os.add].map(function (v) { return v || ''; }).join('|');
@@ -6618,7 +6668,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       g.recs.forEach(function (rec) {
         if (!rec.hasRx) return;
         var date = rec.dates.length ? rec.dates[rec.dates.length - 1] : '';
-        var od = eyeObj(rec.od, rec.add && rec.add.od), os = eyeObj(rec.os, rec.add && rec.add.os);
+        var od = eyeObj(rec.od, rec.add && rec.add.od, rec.va && rec.va.od);
+        var os = eyeObj(rec.os, rec.add && rec.add.os, rec.va && rec.va.os);
         var key = rxKey(date, od, os);
         if (seen[key] || (!date && samePowers[rxKey('', od, os)])) return;   /* a later visit with the same powers is real history */
         seen[key] = true;
@@ -6788,6 +6839,15 @@ var prod = i.productId ? M.find('products', i.productId) : null;
   }
   /* one row per visit, oldest first — the register keeps repeat visits as their own rows,
      so the whole prescription history survives an export and a re-import */
+  /* the VISION column of the export: the VA on the record, else whatever the note still holds */
+  function visionOut(rx, noteMatch) {
+    var a = (rx.od && rx.od.va) || '', b = (rx.os && rx.os.va) || '';
+    if (a && b) return a === b ? a : 'R ' + a + ' L ' + b;
+    if (a) return 'R ' + a;
+    if (b) return 'L ' + b;
+    return noteMatch ? clean(noteMatch[1]) : '';
+  }
+
   function registerRows(c) {
     var rxs = M.customerRx(c.id).slice().sort(function (a, b) { return (a.date || '') > (b.date || '') ? 1 : -1; });
     var parts = splitNotes(c.notes);
@@ -6832,7 +6892,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       if (last) ref = ref.concat(parts.ref);
       return [0, c.name, c.address,
         fmtEye('R', rx.od), fmtEye('L', rx.os), fmtAdd(rx),
-        vision ? clean(vision[1]) : '', dates.sort().map(dmy).join('/'), details.join(', '),
+        visionOut(rx, vision), dates.sort().map(dmy).join('/'), details.join(', '),
         ref.join(' / '), contact, last ? remarks : ''];
     });
   }
@@ -8047,7 +8107,11 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var q = r.query.q || '';
     var SHOW = UI.shown(r);
 
+    var showCancelled = r.query.cancelled === '1';
     var list = M.sales().slice();
+    /* a cancelled bill is kept in the records but stays out of the list unless it is asked for */
+    var cancelledCount = list.filter(function (s) { return s.status === 'cancelled'; }).length;
+    list = list.filter(function (s) { return showCancelled ? s.status === 'cancelled' : s.status !== 'cancelled'; });
     if (from) list = list.filter(function (s) { return s.date >= from; });
     if (to) list = list.filter(function (s) { return s.date <= to; });
     if (q) {
@@ -8079,10 +8143,15 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         '<button class="chip" data-range="week">7 days</button>' +
         '<button class="chip" data-range="month">This month</button>' +
         '<button class="chip" data-range="all">All</button>' +
+        (cancelledCount
+          ? '<button class="chip' + (showCancelled ? ' on' : '') + '" data-cancelled="' + (showCancelled ? '0' : '1') + '">' +
+            (showCancelled ? 'Back to active bills' : 'Cancelled (' + cancelledCount + ')') + '</button>'
+          : '') +
       '</div></div>';
 
     html += '<div class="card">';
-    if (!list.length) html += UI.empty('receipt', 'No invoices found', 'Tap the button above to create a new bill');
+    if (!list.length) html += UI.empty('receipt', showCancelled ? 'No cancelled bills' : 'No invoices found',
+      showCancelled ? 'Nothing was cancelled in this period' : 'Tap the button above to create a new bill');
     else {
       html += '<div class="tablewrap"><table class="tbl"><thead><tr>' +
         '<th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th>' +
@@ -8123,6 +8192,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     App.el('#sfrom', view).addEventListener('change', function () { apply({}); });
     App.el('#sto', view).addEventListener('change', function () { apply({}); });
     App.el('#sclear', view).addEventListener('click', function () { UI.go('/sales'); });
+    App.on(view, 'click', '[data-cancelled]', function () {
+      apply({ cancelled: this.getAttribute('data-cancelled') === '1' ? '1' : '' });
+    });
     App.on(view, 'click', '[data-range]', function () {
       var k = this.getAttribute('data-range'), t = App.today();
       if (k === 'today') apply({ from: t, to: t });
@@ -11465,9 +11537,55 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         '<div class="flex gap8 mt8 wrap">' +
           '<label class="btn btn-sm">' + App.icon('image', 16) + '<span>' + (src ? 'Change logo' : 'Add logo') + '</span>' +
             '<input type="file" id="stlogo" accept="image/png,image/jpeg,image/webp" hidden></label>' +
+          (src ? '<button class="btn btn-sm" id="stlogowhite" type="button">' + App.icon('image', 16) +
+            '<span>Clear white background</span></button>' : '') +
           (src ? '<button class="btn btn-sm btn-ghost" id="stlogodel" type="button" style="color:var(--danger)">' +
             App.icon('trash', 16) + '<span>Remove</span></button>' : '') +
-        '</div></div></div>';
+        '</div>' +
+        (src ? '<div class="help mt8">A logo saved as a photo carries a white square around it. ' +
+          '"Clear white background" wipes that white away so only the logo shows on the shop header and on bills.</div>' : '') +
+      '</div></div>';
+  }
+
+  /* White around a logo becomes see-through, so it sits on the shop header colour and on the
+     invoice without a white box around it. Anything that is not near-white is left alone. */
+  function clearWhite(cv) {
+    var ctx = cv.getContext('2d'), data;
+    try { data = ctx.getImageData(0, 0, cv.width, cv.height); }
+    catch (e) { return false; }                       /* a picture from another website — leave it as it is */
+    var px = data.data, changed = 0;
+    for (var i = 0; i < px.length; i += 4) {
+      if (px[i + 3] === 0) continue;
+      var r = px[i], g = px[i + 1], b = px[i + 2];
+      var lo = Math.min(r, Math.min(g, b)), hi = Math.max(r, Math.max(g, b));
+      if (hi - lo > 26) continue;                     /* a colour, not grey-white */
+      if (lo >= 238) { px[i + 3] = 0; changed++; }    /* plain white: gone */
+      else if (lo >= 214) {                           /* the soft edge: fade it out */
+        var a = Math.round(((238 - lo) / 24) * px[i + 3]);
+        if (a < px[i + 3]) { px[i + 3] = a; changed++; }
+      }
+    }
+    if (!changed) return false;
+    ctx.putImageData(data, 0, 0);
+    return true;
+  }
+
+  /* take the white off a logo that is already saved */
+  function clearWhiteOnSaved(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onerror = function () { reject(new Error('This logo could not be opened')); };
+      img.onload = function () {
+        var cv = document.createElement('canvas');
+        cv.width = img.width; cv.height = img.height;
+        cv.getContext('2d').drawImage(img, 0, 0);
+        if (!clearWhite(cv)) return reject(new Error('There is no white background to clear on this logo'));
+        var out = App.safeImg(cv.toDataURL('image/png'));
+        if (!out) return reject(new Error('This logo could not be used'));
+        resolve(out);
+      };
+      img.src = src;
+    });
   }
 
   /* logos keep their transparency (PNG); photo-like pictures become a small JPEG on white */
@@ -11486,8 +11604,16 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           var cv = document.createElement('canvas');
           cv.width = Math.max(1, Math.round(img.width * k)); cv.height = Math.max(1, Math.round(img.height * k));
           cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          var cleared = clearWhite(cv);
           var out = cv.toDataURL('image/png');
-          if (out.length > 300000) {
+          if (cleared && out.length > 300000) {        /* keep it see-through: make it smaller instead of white */
+            var small = document.createElement('canvas');
+            var k2 = Math.min(1, 240 / Math.max(cv.width, cv.height));
+            small.width = Math.max(1, Math.round(cv.width * k2)); small.height = Math.max(1, Math.round(cv.height * k2));
+            small.getContext('2d').drawImage(cv, 0, 0, small.width, small.height);
+            out = small.toDataURL('image/png');
+          }
+          if (!cleared && out.length > 300000) {
             var cj = document.createElement('canvas');
             cj.width = cv.width; cj.height = cv.height;
             var c2 = cj.getContext('2d');
@@ -11794,6 +11920,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     html += '<div class="card"><div class="card-head"><h3>' + App.icon('sliders', 18) + '<span>App</span></h3></div><div class="card-body">' +
       '<label class="switch mb12"><input type="checkbox" id="stdark" ' + (s.theme === 'dark' ? 'checked' : '') + '>' +
       '<span class="track"></span><span class="lb">Dark mode</span></label>' +
+      '<label class="switch mb12"><input type="checkbox" id="stsimple" ' + (s.simpleMode ? 'checked' : '') + '>' +
+      '<span class="track"></span><span class="lb">Large &amp; simple view</span></label>' +
+      '<div class="sm muted mb12" style="margin-top:-6px">Bigger text and buttons \u2014 easier for everyone to read and tap.</div>' +
       '<div class="flex gap8 wrap mb12"><button class="btn" id="sttour" type="button">' + App.icon('info', 18) + '<span>Take a guided tour</span></button></div>' +
       UI.formHTML([
         { k: 'lowStockGlobal', label: 'Default minimum stock for new products', type: 'number', value: s.lowStockGlobal, attrs: 'inputmode="numeric" step="1" min="0"' }
@@ -11842,6 +11971,13 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       App.store.touch(); UI.applyTheme();
     });
 
+    var stSimple = App.el('#stsimple', view);
+    if (stSimple) stSimple.addEventListener('change', function () {
+      App.db.settings.simpleMode = this.checked;
+      App.store.touch(); App.store.saveNow(); UI.applyTheme();
+      App.toast(this.checked ? 'Large & simple view on' : 'Large & simple view off', 'ok', 2500);
+    });
+
     App.el('#stwapreset', view).addEventListener('click', function () {
       App.el('[name="whatsappTemplate"]', view).value = App.Invoice.DEFAULT_TEMPLATE;
       App.toast('Default message restored — tap Save to keep it');
@@ -11862,6 +11998,20 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         App.toast('Logo saved — it now shows on your invoices', 'ok');
       }, function (err) {
         input.value = '';
+        App.toast(err.message, 'err', 5000);
+      });
+    });
+    App.on(view, 'click', '#stlogowhite', function () {
+      var btn = this;
+      btn.disabled = true;
+      clearWhiteOnSaved(App.safeImg(App.db.settings.logo)).then(function (data) {
+        App.db.settings.logo = data;
+        App.store.touch();
+        App.el('#stlogobox', view).innerHTML = logoBlock(data);
+        UI.renderShopHeader();
+        App.toast('White background cleared', 'ok');
+      }, function (err) {
+        btn.disabled = false;
         App.toast(err.message, 'err', 5000);
       });
     });

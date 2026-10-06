@@ -1247,7 +1247,24 @@ html[data-theme="dark"] .savebar .btn{background:#1a0d0d;color:#F87171;border-co
   .tour-ft{flex-wrap:wrap}
   .tour-dots{order:3;width:100%;margin:4px 0 0;justify-content:center}
 }
-
+/* ===== Large & simple view (settings.simpleMode) =======================
+   One toggle scales the whole UI: bigger type tokens + bigger tap targets.
+   Because the app is token-driven, most of this is just overriding tokens. */
+html[data-ui="simple"]{
+  --t-xs:14px; --t-sm:15px; --t-md:17px; --t-base:19px;
+  --t-lg:22px; --t-xl:27px; --t-2xl:33px; --t-3xl:40px;
+  --tap:56px;
+}
+html[data-ui="simple"] body{line-height:1.6}
+html[data-ui="simple"] .btn{min-height:54px;padding:0 var(--s5);font-size:var(--t-md)}
+html[data-ui="simple"] .btn-sm{min-height:46px;font-size:var(--t-sm)}
+html[data-ui="simple"] .btn-lg{min-height:66px;font-size:var(--t-lg)}
+html[data-ui="simple"] .btn-icon{min-height:54px;width:54px}
+html[data-ui="simple"] .btn-sm.btn-icon{min-height:46px;width:46px}
+html[data-ui="simple"] .nav-item{min-height:56px;font-size:var(--t-base)}
+html[data-ui="simple"] .search input{height:56px}
+html[data-ui="simple"] .view-head .actions .btn{min-height:54px}
+html[data-ui="simple"] table.tbl td,html[data-ui="simple"] table.tbl th{padding-top:14px;padding-bottom:14px}
 </style>
 </head>
 <body>
@@ -2043,6 +2060,7 @@ Minimum version required to store current data is: `+i+`.
         rxPadding: 4,
         /* app prefs */
         theme: 'light',
+        simpleMode: false,         /* "Large & simple" view: bigger text + buttons */
         lowStockGlobal: 3,
         autoBackup: true,
         backupEvery: 'day',        /* hour1 | hour2 | hour4 | hour12 | day | week */
@@ -4110,6 +4128,8 @@ Minimum version required to store current data is: `+i+`.
   UI.applyTheme = function () {
     var t = App.db.settings.theme || 'light';
     document.documentElement.setAttribute('data-theme', t);
+    if (App.db.settings.simpleMode) document.documentElement.setAttribute('data-ui', 'simple');
+    else document.documentElement.removeAttribute('data-ui');
     var mt = App.el('meta[name="theme-color"]');
     if (mt) mt.setAttribute('content', t === 'dark' ? '#0e1420' : '#f4f6fa');
   };
@@ -11011,6 +11031,9 @@ Minimum version required to store current data is: `+i+`.
     html += '<div class="card"><div class="card-head"><h3>' + App.icon('sliders', 18) + '<span>App</span></h3></div><div class="card-body">' +
       '<label class="switch mb12"><input type="checkbox" id="stdark" ' + (s.theme === 'dark' ? 'checked' : '') + '>' +
       '<span class="track"></span><span class="lb">Dark mode</span></label>' +
+      '<label class="switch mb12"><input type="checkbox" id="stsimple" ' + (s.simpleMode ? 'checked' : '') + '>' +
+      '<span class="track"></span><span class="lb">Large &amp; simple view</span></label>' +
+      '<div class="sm muted mb12" style="margin-top:-6px">Bigger text and buttons \u2014 easier for everyone to read and tap.</div>' +
       '<div class="flex gap8 wrap mb12"><button class="btn" id="sttour" type="button">' + App.icon('info', 18) + '<span>Take a guided tour</span></button></div>' +
       UI.formHTML([
         { k: 'lowStockGlobal', label: 'Default minimum stock for new products', type: 'number', value: s.lowStockGlobal, attrs: 'inputmode="numeric" step="1" min="0"' }
@@ -11057,6 +11080,13 @@ Minimum version required to store current data is: `+i+`.
     App.el('#stdark', view).addEventListener('change', function () {
       App.db.settings.theme = this.checked ? 'dark' : 'light';
       App.store.touch(); UI.applyTheme();
+    });
+
+    var stSimple = App.el('#stsimple', view);
+    if (stSimple) stSimple.addEventListener('change', function () {
+      App.db.settings.simpleMode = this.checked;
+      App.store.touch(); App.store.saveNow(); UI.applyTheme();
+      App.toast(this.checked ? 'Large & simple view on' : 'Large & simple view off', 'ok', 2500);
     });
 
     App.el('#stwapreset', view).addEventListener('click', function () {
