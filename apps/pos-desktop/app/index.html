@@ -5411,6 +5411,17 @@ Minimum version required to store current data is: `+i+`.
         return;
       }
 
+      /* Online: if the WhatsApp Cloud API is set up, send the invoice PDF
+         straight to the customer — no opening WhatsApp, no manual attach. */
+      if (App.WA && App.WA.configured()) {
+        App.toast('Sending the bill on WhatsApp…');
+        App.WA.sendBill(d.s, number).then(function () {
+          done(number);
+          App.toast('Bill sent on WhatsApp ✓ — invoice PDF attached', 'ok', 4500);
+        }).catch(function (e) { App.toast('WhatsApp: ' + e.message, 'err', 7000); });
+        return;
+      }
+
       /* browser: a web page is not allowed to put a file into WhatsApp, so save the file,
          open the customer's chat with the message, and show how to attach it */
       var file = asPdf ? INV.pdfName(d) : INV.fileName(d);
@@ -12272,13 +12283,43 @@ Minimum version required to store current data is: `+i+`.
     return t + '\n\nThank you!';
   };
 
-  /* send one bill: template if set, otherwise plain text */
-  WA.sendBill = function (sale, to) {
+  /* Upload a file to WhatsApp and get a media id (do NOT set Content-Type —
+     the browser adds the multipart boundary itself). */
+  WA.uploadMedia = function (bytes, filename, mime) {
     var c = WA.config();
+    var fd = new FormData();
+    fd.append('messaging_product', 'whatsapp');
+    fd.append('type', mime);
+    fd.append('file', new Blob([bytes], { type: mime }), filename);
+    return fetch(API + '/' + c.phoneId + '/media', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + c.token }, body: fd
+    }).then(parse).then(function (j) { if (!j.id) throw new Error('Could not upload the bill file.'); return j.id; })
+      .catch(function (e) { if (e instanceof TypeError) throw new Error('Could not reach WhatsApp to upload the bill.'); throw e; });
+  };
+  WA.sendDocument = function (to, mediaId, filename, caption) {
+    return post({ messaging_product: 'whatsapp', to: WA.toNumber(to), type: 'document',
+      document: { id: mediaId, filename: filename, caption: caption || '' } });
+  };
+
+  /* Send one bill — ATTACHES the real invoice PDF (uploads it, then sends it as
+     a document with a short caption). Falls back to template/text if the PDF
+     cannot be built. */
+  WA.sendBill = function (sale, to) {
     to = to || sale.customerMobile;
     if (!to) return Promise.reject(new Error('No customer mobile number on this bill.'));
+    var INV = App.Invoice, pdf = null, fname = 'Invoice-' + (sale.invoiceNo || '') + '.pdf', caption = WA.billText(sale);
+    try {
+      var d = INV.data(sale.id);
+      pdf = INV.toPDF(sale.id);
+      if (d) { fname = INV.pdfName(d); caption = INV.message(d, false) || caption; }
+    } catch (e) { pdf = null; }
+    if (pdf && pdf.length) {
+      return WA.uploadMedia(pdf, fname, 'application/pdf').then(function (id) { return WA.sendDocument(to, id, fname, caption); });
+    }
+    /* no PDF available — best-effort text/template so at least something sends */
+    var c = WA.config();
     if (c.template) return WA.sendTemplate(to, c.template, c.lang, [(App.db.settings.shopName || ''), sale.invoiceNo, App.money(sale.total)]);
-    return WA.sendText(to, WA.billText(sale));
+    return WA.sendText(to, caption);
   };
 })();
 
