@@ -7097,7 +7097,8 @@ Minimum version required to store current data is: `+i+`.
       '<div class="view-head">' +
         '<div><h1>Products & Stock</h1><div class="sub">' + all.length + ' products · ' + units + ' units · Stock value ' + App.money(stockVal) + '</div></div>' +
         '<div class="actions">' +
-          '<button class="btn" id="pexport">' + App.icon('download', 18) + ' CSV</button>' +
+          '<button class="btn" id="pimport">' + App.icon('file', 18) + ' Upload inventory</button>' +
+          '<button class="btn" id="pexport">' + App.icon('download', 18) + ' Export CSV</button>' +
           '<button class="btn" id="ppurchase">' + App.icon('truck', 18) + ' Stock received (Purchase)</button>' +
           '<button class="btn btn-primary" id="pnew">+ New Product</button>' +
         '</div>' +
@@ -7177,6 +7178,7 @@ Minimum version required to store current data is: `+i+`.
     App.el('#pnew', view).addEventListener('click', function () { App.productForm(null); });
     App.on(view, 'click', '[data-act="newprod"]', function () { App.productForm(null); });
     App.el('#ppurchase', view).addEventListener('click', function () { UI.go('/purchases?new=1'); });
+    App.el('#pimport', view).addEventListener('click', function () { App.ProductCSV.importDialog(); });
     App.el('#pexport', view).addEventListener('click', function () {
       var rows = [['SKU','Name','Brand','Category','Model','Colour','Size','Cost','Sell','MRP','Stock','Min Stock','Stock Value','Barcode','Supplier','Notes']];
       list.forEach(function (p) {
@@ -7464,6 +7466,180 @@ Minimum version required to store current data is: `+i+`.
   function typePill(t) {
     return { sale: 'p-danger', purchase: 'p-ok', opening: 'p-brand', adjust: 'p-warn',
       'sale-return': 'p-info', 'purchase-return': 'p-info' }[t] || 'p-mute';
+  }
+})();
+
+
+/* ===== 42b-products-csv.js ===== */
+/* ============================================================================
+   42b-products-csv.js — bulk inventory upload for the POS.
+   Upload a spreadsheet (export your Excel sheet as CSV) to add or update many
+   products at once. Columns are matched by heading, so the file the Products
+   screen exports can be edited and re-imported as-is. Public API:
+   App.ProductCSV.importDialog(onDone), App.ProductCSV.template().
+   ========================================================================== */
+(function () {
+  'use strict';
+  var App = window.App, M = App.M, UI = App.UI;
+  var X = {};
+  App.ProductCSV = X;
+
+  /* ---------- template ---------- */
+  X.template = function () {
+    var rows = [
+      ['Name', 'Category', 'Selling price', 'Purchase price', 'MRP', 'Stock', 'Low stock', 'Barcode', 'SKU', 'Brand'],
+      ['Masala Dosa', 'Food & Drinks', '60', '25', '', '40', '5', '', '', ''],
+      ['Water Bottle 1L', 'Grocery', '20', '14', '22', '100', '12', '8901234567890', '', 'AquaPure']
+    ];
+    App.download('product-upload-template.csv', '﻿' + App.toCSV(rows), 'text/csv');
+    App.toast('Template downloaded — fill it in Excel, Save As CSV, then upload', 'ok', 5000);
+  };
+
+  /* ---------- column matching ---------- */
+  function col(headers, names) {
+    for (var i = 0; i < headers.length; i++) {
+      var h = App.norm(headers[i]);
+      for (var j = 0; j < names.length; j++) if (h === App.norm(names[j])) return i;
+    }
+    return -1;
+  }
+  function readRows(rows) {
+    if (!rows || !rows.length) return { err: 'The file is empty.' };
+    var H = rows[0].map(function (x) { return String(x == null ? '' : x); });
+    var iName = col(H, ['name', 'product', 'item', 'product name']);
+    if (iName < 0) return { err: 'Could not find a "Name" column. The first row should be the column headings.' };
+    var idx = {
+      name: iName,
+      category: col(H, ['category', 'type']),
+      sell: col(H, ['selling price', 'sell', 'sell price', 'price', 'rate', 'mrp sell']),
+      cost: col(H, ['purchase price', 'cost', 'cost price', 'buy price']),
+      mrp: col(H, ['mrp', 'maximum retail price']),
+      stock: col(H, ['stock', 'quantity', 'qty', 'opening stock', 'current stock']),
+      min: col(H, ['low stock', 'min stock', 'minimum stock', 'low-stock', 'reorder']),
+      barcode: col(H, ['barcode', 'bar code', 'ean', 'upc']),
+      sku: col(H, ['sku', 'sku / product id', 'product id', 'code', 'item code']),
+      brand: col(H, ['brand', 'make', 'company'])
+    };
+    var g = function (r, i) { return i >= 0 && i < r.length ? String(r[i] == null ? '' : r[i]).trim() : ''; };
+    var out = [];
+    for (var k = 1; k < rows.length; k++) {
+      var r = rows[k]; if (!r || !r.length) continue;
+      var name = g(r, idx.name); if (!name) continue;
+      out.push({
+        name: name, category: g(r, idx.category), sell: g(r, idx.sell), cost: g(r, idx.cost),
+        mrp: g(r, idx.mrp), stock: g(r, idx.stock), min: g(r, idx.min),
+        barcode: g(r, idx.barcode), sku: g(r, idx.sku), brand: g(r, idx.brand)
+      });
+    }
+    return { rows: out };
+  }
+
+  function match(rec) {
+    var all = M.products();
+    if (rec.sku) { var bs = all.filter(function (p) { return p.sku && App.norm(p.sku) === App.norm(rec.sku); }); if (bs.length) return bs[0]; }
+    if (rec.barcode) {
+      var bc = rec.barcode.replace(/\s/g, '');
+      var bb = all.filter(function (p) { return (p.variants || []).some(function (v) { return v.barcode && v.barcode.replace(/\s/g, '') === bc; }); });
+      if (bb.length) return bb[0];
+    }
+    var nm = App.norm(rec.name);
+    var bn = all.filter(function (p) { return App.norm(p.name) === nm; });
+    return bn.length ? bn[0] : null;
+  }
+
+  /* ---------- import ---------- */
+  X.importDialog = function (onDone) {
+    var m = UI.modal({
+      title: 'Upload inventory',
+      size: 'wide',
+      body: '<div class="sm mb12">Add or update many products at once from a spreadsheet. ' +
+        'Export your Excel sheet as <b>CSV</b> (File → Save As → CSV), then choose it here. ' +
+        'Headings matched: <span class="mono">Name, Category, Selling price, Purchase price, MRP, Stock, Low stock, Barcode, SKU, Brand</span> — only <b>Name</b> is required.</div>' +
+        '<div class="flex gap8 wrap mb16">' +
+          '<button class="btn" id="pcsvtpl" type="button">' + App.icon('download', 18) + '<span>Download template</span></button>' +
+          '<label class="btn btn-primary" style="cursor:pointer">' + App.icon('file', 18) + '<span>Choose CSV file</span>' +
+            '<input type="file" id="pcsvfile" accept=".csv,text/csv,text/plain" hidden></label>' +
+        '</div>' +
+        '<div id="pcsvout"></div>',
+      buttons: [{ label: 'Close', onClick: function (a) { a.close(); } }]
+    });
+    App.el('#pcsvtpl', m.el).addEventListener('click', X.template);
+    App.el('#pcsvfile', m.el).addEventListener('change', function () {
+      var f = this.files && this.files[0]; if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () { preview(String(reader.result || ''), m, onDone); };
+      reader.onerror = function () { App.toast('Could not read that file', 'err'); };
+      reader.readAsText(f);
+    });
+  };
+
+  function preview(text, modal, onDone) {
+    var out = App.el('#pcsvout', modal.el);
+    var parsed; try { parsed = App.parseCSV(text); } catch (e) { out.innerHTML = '<div class="banner danger">' + App.icon('alert', 20) + '<div class="tx">That does not look like a CSV file.</div></div>'; return; }
+    var res = readRows(parsed);
+    if (res.err) { out.innerHTML = '<div class="banner danger">' + App.icon('alert', 20) + '<div class="tx">' + App.esc(res.err) + '</div></div>'; return; }
+    var recs = res.rows;
+    if (!recs.length) { out.innerHTML = '<div class="banner warn">' + App.icon('alert', 20) + '<div class="tx">No product rows were found.</div></div>'; return; }
+
+    var add = [], upd = [];
+    recs.forEach(function (r) { (match(r) ? upd : add).push(r); });
+
+    var sample = recs.slice(0, 8).map(function (r) {
+      var ex = match(r);
+      return '<tr><td>' + App.esc(r.name) + '</td><td class="sm dim">' + App.esc(r.category || '—') + '</td>' +
+        '<td class="num right">' + (r.sell ? App.money(App.n(r.sell)) : '—') + '</td>' +
+        '<td class="num right">' + (r.stock !== '' ? App.n(r.stock) : '—') + '</td>' +
+        '<td class="sm">' + (ex ? '<span class="pill p-info">Update</span>' : '<span class="pill p-ok">New</span>') + '</td></tr>';
+    }).join('');
+
+    out.innerHTML =
+      '<div class="banner mb12">' + App.icon('info', 20) + '<div class="tx"><b>' + add.length + '</b> new, <b>' + upd.length + '</b> to update, from <b>' + recs.length + '</b> rows.</div></div>' +
+      '<div class="tablewrap" style="max-height:280px;overflow:auto"><table class="tbl"><thead><tr>' +
+        '<th>Name</th><th>Category</th><th class="right">Price</th><th class="right">Stock</th><th></th></tr></thead><tbody>' +
+        sample + (recs.length > 8 ? '<tr><td colspan="5" class="sm dim">…and ' + (recs.length - 8) + ' more</td></tr>' : '') +
+      '</tbody></table></div>' +
+      '<div class="flex gap8 mt16"><button class="btn btn-primary" id="pcsvapply">' + App.icon('check', 18) + '<span>Import ' + recs.length + ' product' + (recs.length === 1 ? '' : 's') + '</span></button></div>';
+
+    App.el('#pcsvapply', out).addEventListener('click', function () {
+      this.disabled = true;
+      var nAdd = 0, nUpd = 0;
+      recs.forEach(function (r) {
+        var ex = match(r);
+        var has = function (v) { return v !== '' && v != null; };
+        if (ex) {
+          var d = {};
+          d.name = r.name;
+          if (has(r.category)) d.category = r.category;
+          if (has(r.sell)) d.sellPrice = App.n(r.sell);
+          if (has(r.cost)) d.costPrice = App.n(r.cost);
+          if (has(r.mrp)) d.mrp = App.n(r.mrp);
+          if (has(r.min)) d.minStock = App.n(r.min);
+          if (has(r.brand)) d.brand = r.brand;
+          if (has(r.sku)) d.sku = r.sku;
+          M.productUpdate(ex.id, d);
+          /* stock: set the single variant's level when a Stock value is given */
+          if (has(r.stock) && (ex.variants || []).length <= 1) {
+            var v = ex.variants && ex.variants[0];
+            M.setVariants(ex.id, [{ id: v ? v.id : '', size: v ? v.size : '', colour: v ? v.colour : '',
+              barcode: has(r.barcode) ? r.barcode : (v ? v.barcode : ''), stock: App.n(r.stock),
+              minStock: has(r.min) ? App.n(r.min) : ex.minStock }]);
+          }
+          nUpd++;
+        } else {
+          M.productCreate({
+            name: r.name, category: r.category || M.CATEGORIES[0],
+            sellPrice: App.n(r.sell), costPrice: App.n(r.cost), mrp: App.n(r.mrp),
+            minStock: has(r.min) ? App.n(r.min) : '', brand: r.brand,
+            sku: r.sku, barcode: r.barcode, stock: App.n(r.stock)
+          });
+          nAdd++;
+        }
+      });
+      App.store.saveNow();
+      modal.close();
+      App.toast(nAdd + ' added, ' + nUpd + ' updated', 'ok', 4500);
+      if (onDone) onDone(); else UI.render();
+    });
   }
 })();
 

@@ -241,26 +241,26 @@ export const defaultProducts: Product[] = [
 const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.4";
 const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.4";
 const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.4";
-const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.9";
+const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.10";
 
 export const defaultSoftware: Software[] = [
   {
     id: "adminuscurator-pos",
     name: "Adminuscurator POS",
     description:
-      "A fast, offline point-of-sale for any shop or counter: tap or scan products into a cart and take payment in seconds. An optional restaurant/tables mode holds a separate order per table. Add your own WhatsApp API to auto-send bills and run campaigns, with a Swiggy/Zomato order inbox tagged by channel. Includes inventory, GST billing, customers, credit, expenses, reports and backup. Works on Android, Windows and Mac — no internet or account needed.",
+      "A fast, offline point-of-sale for any shop or counter: tap or scan products into a cart and take payment in seconds. Bulk-upload your inventory from a spreadsheet. An optional restaurant/tables mode holds a separate order per table. Add your own WhatsApp API to auto-send bills and run campaigns, with a Swiggy/Zomato order inbox tagged by channel. Includes inventory, GST billing, customers, credit, expenses, reports and backup. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "store",
-    version: "1.25.9",
+    version: "1.25.10",
     releaseDate: "2026-10-06",
-    mobileUrl: "/files/Adminuscurator-POS-1.25.9.apk",
-    mobileSize: "200 KB",
-    tabletUrl: "/files/Adminuscurator-POS-1.25.9.apk",
-    tabletSize: "200 KB",
+    mobileUrl: "/files/Adminuscurator-POS-1.25.10.apk",
+    mobileSize: "204 KB",
+    tabletUrl: "/files/Adminuscurator-POS-1.25.10.apk",
+    tabletSize: "204 KB",
     // Desktop installers — built by .github/workflows/pos-desktop.yml
-    windowsUrl: `${POS_RELEASE}/AdminuscuratorPOS-Setup-1.25.9.exe`,
+    windowsUrl: `${POS_RELEASE}/AdminuscuratorPOS-Setup-1.25.10.exe`,
     windowsSize: "106 MB",
-    macUrl: `${POS_RELEASE}/AdminuscuratorPOS-1.25.9-mac.dmg`,
+    macUrl: `${POS_RELEASE}/AdminuscuratorPOS-1.25.10-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
