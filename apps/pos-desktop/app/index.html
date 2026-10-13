@@ -2138,6 +2138,131 @@ Minimum version required to store current data is: `+i+`.
 })();
 
 
+/* ===== 09-xlsx.js ===== */
+/* ============================================================================
+   09-xlsx.js — read an Excel .xlsx file into rows, with no external library.
+   An .xlsx is a ZIP of XML. We read the ZIP's central directory, inflate the
+   entries we need with the browser's built-in DecompressionStream, and parse
+   the first worksheet + shared strings with DOMParser.
+
+   App.xlsxSupported()            -> boolean (false on very old WebViews)
+   App.xlsxToRows(arrayBuffer)    -> Promise<rows[][]>  (same shape as parseCSV)
+   ========================================================================== */
+(function () {
+  'use strict';
+  var App = window.App = window.App || {};
+
+  App.xlsxSupported = function () {
+    return typeof DecompressionStream === 'function' && typeof DOMParser === 'function' &&
+           typeof TextDecoder === 'function' && typeof Response === 'function';
+  };
+
+  function decode(bytes) { return new TextDecoder('utf-8').decode(bytes); }
+
+  function inflateRaw(bytes) {
+    var ds = new DecompressionStream('deflate-raw');
+    var w = ds.writable.getWriter();
+    w.write(bytes); w.close();
+    return new Response(ds.readable).arrayBuffer().then(function (ab) { return new Uint8Array(ab); });
+  }
+
+  /* ---- minimal ZIP central-directory reader ---- */
+  function openZip(arrayBuffer) {
+    var dv = new DataView(arrayBuffer), u8 = new Uint8Array(arrayBuffer), len = arrayBuffer.byteLength;
+    var eocd = -1;
+    for (var i = len - 22; i >= 0 && i >= len - 22 - 65536; i--) { if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; } }
+    if (eocd < 0) throw new Error('That does not look like an Excel (.xlsx) file.');
+    var count = dv.getUint16(eocd + 10, true), cdOff = dv.getUint32(eocd + 16, true);
+    var entries = {}, p = cdOff;
+    for (var n = 0; n < count; n++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) break;
+      var method = dv.getUint16(p + 10, true);
+      var compSize = dv.getUint32(p + 20, true);
+      var nameLen = dv.getUint16(p + 28, true);
+      var extraLen = dv.getUint16(p + 30, true);
+      var commentLen = dv.getUint16(p + 32, true);
+      var localOff = dv.getUint32(p + 42, true);
+      var name = decode(u8.subarray(p + 46, p + 46 + nameLen));
+      entries[name] = { method: method, compSize: compSize, localOff: localOff };
+      p += 46 + nameLen + extraLen + commentLen;
+    }
+    return { dv: dv, u8: u8, entries: entries };
+  }
+
+  function readEntry(z, name) {
+    var e = z.entries[name];
+    if (!e) return Promise.resolve(null);
+    var dv = z.dv, lh = e.localOff;
+    if (dv.getUint32(lh, true) !== 0x04034b50) return Promise.resolve(null);
+    var nameLen = dv.getUint16(lh + 26, true), extraLen = dv.getUint16(lh + 28, true);
+    var start = lh + 30 + nameLen + extraLen;
+    var comp = z.u8.slice(start, start + e.compSize);
+    if (e.method === 0) return Promise.resolve(comp);            /* stored */
+    if (e.method === 8) return inflateRaw(comp);                 /* deflate */
+    return Promise.reject(new Error('Unsupported compression in the Excel file.'));
+  }
+
+  /* ---- XML -> rows ---- */
+  function parseShared(xml) {
+    if (!xml) return [];
+    var doc = new DOMParser().parseFromString(xml, 'application/xml');
+    var sis = doc.getElementsByTagName('si'), out = [];
+    for (var i = 0; i < sis.length; i++) {
+      var ts = sis[i].getElementsByTagName('t'), s = '';
+      for (var j = 0; j < ts.length; j++) s += ts[j].textContent;
+      out.push(s);
+    }
+    return out;
+  }
+  function colIndex(ref) {           /* "B3" -> 1 */
+    var c = 0;
+    for (var i = 0; i < ref.length; i++) {
+      var ch = ref.charCodeAt(i);
+      if (ch >= 65 && ch <= 90) c = c * 26 + (ch - 64);
+      else break;
+    }
+    return c - 1;
+  }
+  function parseSheet(xml, shared) {
+    var doc = new DOMParser().parseFromString(xml, 'application/xml');
+    var rowEls = doc.getElementsByTagName('row'), rows = [];
+    for (var i = 0; i < rowEls.length; i++) {
+      var cells = rowEls[i].getElementsByTagName('c'), row = [], maxc = -1;
+      for (var j = 0; j < cells.length; j++) {
+        var c = cells[j], ref = c.getAttribute('r') || '', idx = ref ? colIndex(ref) : j;
+        var t = c.getAttribute('t'), val = '';
+        if (t === 's') { var v = c.getElementsByTagName('v')[0]; if (v) val = shared[+v.textContent] || ''; }
+        else if (t === 'inlineStr' || t === 'str') {
+          var ts = c.getElementsByTagName('t'); for (var k = 0; k < ts.length; k++) val += ts[k].textContent;
+          if (!ts.length) { var vv = c.getElementsByTagName('v')[0]; if (vv) val = vv.textContent; }
+        } else { var v2 = c.getElementsByTagName('v')[0]; val = v2 ? v2.textContent : ''; }
+        row[idx] = val; if (idx > maxc) maxc = idx;
+      }
+      for (var m = 0; m <= maxc; m++) if (row[m] === undefined) row[m] = '';
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  App.xlsxToRows = function (arrayBuffer) {
+    return Promise.resolve().then(function () {
+      if (!App.xlsxSupported()) throw new Error('This device cannot read .xlsx here — please save the file as CSV.');
+      var z = openZip(arrayBuffer);
+      var sheet = 'xl/worksheets/sheet1.xml';
+      if (!z.entries[sheet]) {
+        var names = Object.keys(z.entries).filter(function (n) { return /^xl\/worksheets\/sheet\d+\.xml$/.test(n); }).sort();
+        sheet = names[0];
+      }
+      if (!sheet) throw new Error('No sheet was found in the Excel file.');
+      return Promise.all([readEntry(z, 'xl/sharedStrings.xml'), readEntry(z, sheet)]).then(function (parts) {
+        var shared = parseShared(parts[0] ? decode(parts[0]) : '');
+        return parseSheet(decode(parts[1]), shared);
+      });
+    });
+  };
+})();
+
+
 /* ===== 10-store.js ===== */
 /* =========================================================================
    10-store.js — local persistence, schema, migrations, atomic writes
@@ -7553,12 +7678,12 @@ Minimum version required to store current data is: `+i+`.
       title: 'Upload inventory',
       size: 'wide',
       body: '<div class="sm mb12">Add or update many products at once from a spreadsheet. ' +
-        'Export your Excel sheet as <b>CSV</b> (File → Save As → CSV), then choose it here. ' +
+        'Choose an <b>Excel (.xlsx)</b> or <b>CSV</b> file. ' +
         'Headings matched: <span class="mono">Name, Category, Selling price, Purchase price, MRP, Stock, Low stock, Barcode, SKU, Brand</span> — only <b>Name</b> is required.</div>' +
         '<div class="flex gap8 wrap mb16">' +
           '<button class="btn" id="pcsvtpl" type="button">' + App.icon('download', 18) + '<span>Download template</span></button>' +
-          '<label class="btn btn-primary" style="cursor:pointer">' + App.icon('file', 18) + '<span>Choose CSV file</span>' +
-            '<input type="file" id="pcsvfile" accept=".csv,text/csv,text/plain" hidden></label>' +
+          '<label class="btn btn-primary" style="cursor:pointer">' + App.icon('file', 18) + '<span>Choose Excel / CSV file</span>' +
+            '<input type="file" id="pcsvfile" accept=".csv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>' +
         '</div>' +
         '<div id="pcsvout"></div>',
       buttons: [{ label: 'Close', onClick: function (a) { a.close(); } }]
@@ -7566,16 +7691,32 @@ Minimum version required to store current data is: `+i+`.
     App.el('#pcsvtpl', m.el).addEventListener('click', X.template);
     App.el('#pcsvfile', m.el).addEventListener('change', function () {
       var f = this.files && this.files[0]; if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function () { preview(String(reader.result || ''), m, onDone); };
-      reader.onerror = function () { App.toast('Could not read that file', 'err'); };
-      reader.readAsText(f);
+      var out = App.el('#pcsvout', m.el);
+      var isXlsx = /\.xlsx$/i.test(f.name) || (f.type || '').indexOf('spreadsheetml') >= 0;
+      var fail = function () { App.toast('Could not read that file', 'err'); };
+      if (isXlsx) {
+        out.innerHTML = '<div class="sm muted">Reading Excel file…</div>';
+        var rx = new FileReader();
+        rx.onload = function () {
+          App.xlsxToRows(rx.result)
+            .then(function (rows) { previewRows(rows, m, onDone); })
+            .catch(function (e) { out.innerHTML = '<div class="banner danger">' + App.icon('alert', 20) + '<div class="tx">' + App.esc(e.message) + '</div></div>'; });
+        };
+        rx.onerror = fail; rx.readAsArrayBuffer(f);
+      } else {
+        var rc = new FileReader();
+        rc.onload = function () {
+          var rows; try { rows = App.parseCSV(String(rc.result || '')); }
+          catch (e) { out.innerHTML = '<div class="banner danger">' + App.icon('alert', 20) + '<div class="tx">That does not look like a CSV file.</div></div>'; return; }
+          previewRows(rows, m, onDone);
+        };
+        rc.onerror = fail; rc.readAsText(f);
+      }
     });
   };
 
-  function preview(text, modal, onDone) {
+  function previewRows(parsed, modal, onDone) {
     var out = App.el('#pcsvout', modal.el);
-    var parsed; try { parsed = App.parseCSV(text); } catch (e) { out.innerHTML = '<div class="banner danger">' + App.icon('alert', 20) + '<div class="tx">That does not look like a CSV file.</div></div>'; return; }
     var res = readRows(parsed);
     if (res.err) { out.innerHTML = '<div class="banner danger">' + App.icon('alert', 20) + '<div class="tx">' + App.esc(res.err) + '</div></div>'; return; }
     var recs = res.rows;
