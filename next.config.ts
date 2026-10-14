@@ -9,7 +9,7 @@ const securityHeaders = [
 
 /** Static export for GitHub Pages (see .github/workflows/pages.yml). */
 const isStatic = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const basePath = "";
 
 const nextConfig: NextConfig = isStatic
   ? {
