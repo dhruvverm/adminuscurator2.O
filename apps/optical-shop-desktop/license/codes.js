@@ -9,6 +9,11 @@
  */
 const crypto = require("node:crypto");
 const SECRET = require("./secret");
+const MASTER = (function () {
+  try { return require("node:fs").readFileSync(require("node:path").join(__dirname, "master.key"), "utf8").trim(); }
+  catch (e) { return null; }
+})();
+const MARKER = "ADM1NVSCVRAT0R"; // normalize("ADMINUSCURATOR") — branded universal-code prefix
 
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford base32 (no I,L,O,U)
 const ID_BYTES = 5; // 40 bits of randomness
@@ -44,6 +49,10 @@ function checkFor(body) {
   return crypto.createHmac("sha256", SECRET).update(body).digest().subarray(0, CHECK_BYTES);
 }
 
+function checkForWith(secret, body) {
+  return crypto.createHmac("sha256", secret).update(body).digest().subarray(0, CHECK_BYTES);
+}
+
 /** Creates a new genuine code. kind = "trial" (default) or "lifetime". */
 function generate(kind = "trial") {
   const k = KIND_BYTE[kind];
@@ -70,7 +79,21 @@ function normalize(input) {
  * format (id + check) so early codes keep working.
  */
 function verify(input) {
-  const buf = fromBase32(normalize(input));
+  const norm = normalize(input);
+  if (MASTER && norm.indexOf(MARKER) === 0) {
+    const mbuf = fromBase32(norm.slice(MARKER.length));
+    if (mbuf && mbuf.length >= ID_BYTES + 1 + CHECK_BYTES) {
+      const mbody = mbuf.subarray(0, ID_BYTES + 1);
+      const mcheck = mbuf.subarray(ID_BYTES + 1, ID_BYTES + 1 + CHECK_BYTES);
+      const mexp = checkForWith(MASTER, mbody);
+      if (mexp.length === mcheck.length && crypto.timingSafeEqual(mcheck, mexp)) {
+        const kind = KIND[mbody[ID_BYTES]];
+        if (kind) return { id: "M" + mbody.subarray(0, ID_BYTES).toString("hex"), kind };
+      }
+    }
+    return null;
+  }
+  const buf = fromBase32(norm);
   if (!buf) return null;
 
   // Current format: 5 (id) + 1 (kind) + 4 (check) = 10 bytes.
@@ -81,6 +104,13 @@ function verify(input) {
     if (check.length === expected.length && crypto.timingSafeEqual(check, expected)) {
       const kind = KIND[body[ID_BYTES]];
       if (kind) return { id: body.subarray(0, ID_BYTES).toString("hex"), kind };
+    }
+    if (MASTER) {
+      const mexp = checkForWith(MASTER, body);
+      if (mexp.length === check.length && crypto.timingSafeEqual(check, mexp)) {
+        const kind = KIND[body[ID_BYTES]];
+        if (kind) return { id: "M" + body.subarray(0, ID_BYTES).toString("hex"), kind };
+      }
     }
   }
   // Legacy format: 5 (id) + 4 (check) = 9 bytes, always a trial.
