@@ -16,7 +16,7 @@ const crypto = require("node:crypto");
 const codes = require("./codes");
 const SECRET = require("./secret");
 
-const TRIAL_DAYS = 7;
+const TRIAL_DAYS = 15;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_MS = TRIAL_DAYS * DAY_MS;
 const SKEW_MS = 6 * 60 * 60 * 1000; // tolerate small backward clock moves (timezone/DST)
