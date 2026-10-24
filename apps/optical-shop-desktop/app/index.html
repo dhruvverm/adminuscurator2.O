@@ -1202,7 +1202,8 @@ html[data-theme="dark"] .savebar .btn{background:#1a0d0d;color:#F87171;border-co
 
 /* the date printed on the bill, in plain sight above the payment */
 .bill-date{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s4)}
-.bill-date input[type=date]{flex:1 1 150px;min-width:130px}
+.bill-date input[type=date]{flex:1 1 150px;min-width:130px;height:40px;min-height:40px;border:1px solid var(--border-input);border-radius:var(--r);background:var(--surface);padding:0 var(--s3);color:var(--fg);outline:none;font-variant-numeric:tabular-nums}
+.bill-date input[type=date]:focus{border-color:var(--secondary);box-shadow:0 0 0 3px var(--primary-soft)}
 .date-tag{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
   padding:3px 10px;border-radius:999px;background:var(--warn-soft,#fff4e0);color:var(--warn-ink,#9a5b00)}
 .date-tag.ahead{background:var(--info-soft,#e4f0ff);color:var(--info-ink,#1E3A5F)}
