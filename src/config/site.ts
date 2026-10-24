@@ -47,9 +47,9 @@ export const siteConfig = {
 
   /** Contact details — PLACEHOLDERS until real details are provided. */
   contact: {
-    email: "hello@yourcompany.com",
-    salesEmail: "sales@yourcompany.com",
-    supportEmail: "support@yourcompany.com",
+    email: "adminuscurator@gmail.com",
+    salesEmail: "adminuscurator@gmail.com",
+    supportEmail: "adminuscurator@gmail.com",
     phone: "+1 (000) 000-0000",
     address: "[Street Address], [City], [State/Region] [Postal Code], [Country]",
     hours: "Monday – Friday, 9:00 AM – 6:00 PM [Time Zone]",

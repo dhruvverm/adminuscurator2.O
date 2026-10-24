@@ -70,11 +70,11 @@ export const defaultFeatures: Feature[] = [
  */
 const ALL_FEATURES = [
   "Every feature included — nothing locked",
-  "Offline billing with GST invoices",
+  "Offline billing & instant invoices",
   "Unlimited customers & credit (udhaar) tracking",
   "Products & stock management",
-  "Payments & UPI QR on every bill",
-  "Sales, profit & GST reports",
+  "Payments tracked on every bill",
+  "Sales, profit & business reports",
   "Automatic backup & restore",
   "Thermal (58/80 mm) & A5 invoice printing",
   "WhatsApp invoice sharing",
@@ -167,60 +167,51 @@ export const defaultTestimonials: Testimonial[] = [
 export const defaultFaqs: Faq[] = [
   {
     id: "what",
-    question: "What is this software?",
+    question: "What is Adminuscurator?",
     answer:
-      "It's an all-in-one platform that brings your dashboards, automation, analytics and team collaboration together so your business can run more smoothly. [Replace with a one-sentence description of your product.]",
+      "Adminuscurator is offline business-management software that helps you run everyday operations — billing, inventory, customers, credit (udhaar), expenses and reports — all in one place, so your business stays simple and organised.",
   },
   {
-    id: "who",
-    question: "Who is it designed for?",
+    id: "editions",
+    question: "Which businesses is it for, and what editions are available?",
     answer:
-      "Startups, small businesses, growing teams and larger organizations that want to reduce manual work and centralize their workflows. [Replace with your target customers.]",
+      "There are four editions: POS (any shop or counter), Optical (optical shops), Retail (clothing with size & colour variants) and Services (service price lists & appointments). Choose the one that fits your business on the Downloads page.",
   },
   {
-    id: "how",
-    question: "How does the software work?",
+    id: "offline",
+    question: "Does it work offline, and do I need an account?",
     answer:
-      "Create an account, configure your workspace and workflows, invite your team, and start using automation and analytics from a single dashboard.",
+      "Yes — Adminuscurator runs fully offline with no account and no sign-up, and your data stays on your own device. Only optional integrations such as WhatsApp need an internet connection.",
   },
   {
-    id: "trial",
-    question: "Is there a free trial?",
-    answer: "[Describe your trial or free plan here, e.g. length of trial and whether a card is required.]",
-  },
-  {
-    id: "plans",
-    question: "What plans are available?",
+    id: "devices",
+    question: "Which devices are supported?",
     answer:
-      "We offer Starter, Professional and Business plans. See the pricing page for a full comparison of what each plan includes.",
+      "Android phones and tablets, Windows computers, and Mac. Download the version that matches your device from the Downloads page.",
   },
   {
-    id: "cancel",
-    question: "Can I cancel anytime?",
-    answer: "[Describe your cancellation terms here.] See our Refund Policy for details.",
-  },
-  {
-    id: "security",
-    question: "Is my data secure?",
+    id: "billing",
+    question: "Can I create bills and manage inventory?",
     answer:
-      "Protecting your data is a priority. Visit the security section to learn how we safeguard your information. [Add specifics about your security practices.]",
+      "Yes. Create bills and share them on WhatsApp or print to thermal (58/80 mm) and A5 printers, and manage products and stock with low-stock alerts. The POS edition can also bulk-import inventory from Excel (.xlsx) and CSV. Note: Adminuscurator does not provide GST billing.",
   },
   {
-    id: "integrations",
-    question: "Can I integrate it with other tools?",
+    id: "udhaar",
+    question: "Can I track customer credit (udhaar)?",
     answer:
-      "Yes — the platform is designed to connect with the tools you already use. [List your supported integrations.]",
+      "Yes. Keep customer records and track outstanding balances and payments, so you always know who owes what and stay on top of credit.",
   },
   {
-    id: "support",
-    question: "Do you offer customer support?",
-    answer: "Yes. You can reach our team through the contact page. [Add your support channels and hours.]",
-  },
-  {
-    id: "custom",
-    question: "Can I request a custom solution?",
+    id: "pricing",
+    question: "What does it cost?",
     answer:
-      "Absolutely. Contact our sales team to discuss your requirements and whether a custom setup is right for you.",
+      "One-time payments with no automatic renewal: ₹1,500 for 1 month, ₹8,000 for 6 months, and ₹25,000 for a lifetime licence. Every feature is included in every plan. Prices are in Indian rupees and exclude applicable taxes.",
+  },
+  {
+    id: "backup",
+    question: "Does it back up my data and get updates?",
+    answer:
+      "Yes. Built-in backup & restore lets you save your business data safely before updating or switching devices, and every plan includes free updates and support.",
   },
 ];
 
@@ -248,7 +239,7 @@ export const defaultSoftware: Software[] = [
     id: "adminuscurator-pos",
     name: "Adminuscurator POS",
     description:
-      "A fast, offline point-of-sale for any shop or counter: tap or scan products into a cart and take payment in seconds. Bulk-upload your inventory from an Excel (.xlsx) or CSV file. An optional restaurant/tables mode holds a separate order per table. Add your own WhatsApp API to auto-send bills and run campaigns, with a Swiggy/Zomato order inbox tagged by channel. Includes inventory, GST billing, customers, credit, expenses, reports and backup. Works on Android, Windows and Mac — no internet or account needed.",
+      "A fast, offline point-of-sale for any shop or counter: tap or scan products into a cart and take payment in seconds. Bulk-upload your inventory from an Excel (.xlsx) or CSV file. An optional restaurant/tables mode holds a separate order per table. Add your own WhatsApp API to auto-send bills and run campaigns, with a Swiggy/Zomato order inbox tagged by channel. Includes inventory, billing, customers, credit, expenses, reports and backup. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "store",
     version: "1.25.11",
