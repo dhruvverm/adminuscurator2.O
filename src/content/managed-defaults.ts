@@ -229,7 +229,7 @@ export const defaultProducts: Product[] = [
  * and link them as "/files/…", or use store URLs. Leave a platform's URL
  * empty when it isn't available — that option is then disabled.
  */
-const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.4";
+const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.5";
 const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.4";
 const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.4";
 const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.11";
@@ -263,17 +263,17 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. Installs as an app on Android, Windows and Mac; no internet or account needed, and your data stays on your device.",
     logo: "/brand/app-icon.svg",
     icon: "eye",
-    version: "1.25.4",
-    releaseDate: "2026-10-06",
+    version: "1.25.5",
+    releaseDate: "2026-10-24",
     // Android app (APK) for phones and tablets — served from this site
     mobileUrl: "/files/Adminuscurator-1.25.4.apk",
     mobileSize: "200 KB",
     tabletUrl: "/files/Adminuscurator-1.25.4.apk",
     tabletSize: "200 KB",
     // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
-    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.4.exe`,
+    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.5.exe`,
     windowsSize: "106 MB",
-    macUrl: `${RELEASE}/Adminuscurator-1.25.4-mac.dmg`,
+    macUrl: `${RELEASE}/Adminuscurator-1.25.5-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
@@ -282,7 +282,7 @@ export const defaultSoftware: Software[] = [
     id: "adminuscurator-retail",
     name: "Adminuscurator Retail",
     description:
-      "Offline management and accounting for clothing shops: products with size & colour variants, per-variant stock and low-stock alerts, GST billing, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
+      "Offline management and accounting for clothing shops: products with size & colour variants, per-variant stock and low-stock alerts, billing, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "store",
     version: "1.25.4",

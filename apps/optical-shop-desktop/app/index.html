@@ -1062,9 +1062,12 @@ table.tbl a:hover{text-decoration:underline}
 .iv-top::after{content:"";position:absolute;right:-70px;top:-90px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.07)}
 .iv-shop{display:flex;gap:16px;align-items:center;min-width:0;position:relative;z-index:1}
 .iv-logo{width:78px;height:78px;border-radius:18px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:0 0 auto;overflow:hidden;color:#fff}
-.iv-logo.has-img{background:#fff}
+.iv-logo.has-img{background:transparent;border-radius:0}
 .iv-logo img{width:100%;height:100%;object-fit:contain}
-.iv-logo.has-img img{padding:6px}
+.iv-logo.has-img img{padding:0}
+.iv-logo.has-img.lg-white{background:#fff;border-radius:14px}
+.iv-logo.has-img.lg-soft{background:rgba(255,255,255,.16);border-radius:18px}
+.iv-logo.has-img.lg-white img,.iv-logo.has-img.lg-soft img{padding:7px}
 .iv-shopname{font-size:24px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
 .iv-shopmeta{font-size:13px;opacity:.9;margin-top:4px;line-height:1.5;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .iv-dot{opacity:.6}
@@ -1192,6 +1195,17 @@ html[data-theme="dark"] .savebar .btn{background:#1a0d0d;color:#F87171;border-co
 .bk-when .r{display:flex;justify-content:space-between;gap:var(--s3);padding:3px 0;font-size:var(--t-sm);flex-wrap:wrap}
 .bill-who{margin-top:var(--s3)}
 .bill-who .f label{font-size:var(--t-sm)}
+.bill-who textarea{resize:vertical;min-height:54px}
+.who-more{margin-top:var(--s3)}
+.who-more > summary{font-size:var(--t-sm)}
+.who-more .bill-who{margin:0;padding:var(--s3)}
+
+/* the date printed on the bill, in plain sight above the payment */
+.bill-date{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s4)}
+.bill-date input[type=date]{flex:1 1 150px;min-width:130px}
+.date-tag{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 10px;border-radius:999px;background:var(--warn-soft,#fff4e0);color:var(--warn-ink,#9a5b00)}
+.date-tag.ahead{background:var(--info-soft,#e4f0ff);color:var(--info-ink,#1E3A5F)}
 .cl-name .cl-nm{
   width:100%;border:1px solid transparent;background:transparent;font-weight:600;font-size:var(--t-md);
   padding:2px 4px;margin:-2px -4px 0;border-radius:8px;color:var(--fg);
@@ -1255,6 +1269,14 @@ html[data-ui="simple"] .nav-item{min-height:56px;font-size:var(--t-base)}
 html[data-ui="simple"] .search input{height:56px}
 html[data-ui="simple"] .view-head .actions .btn{min-height:54px}
 html[data-ui="simple"] table.tbl td,html[data-ui="simple"] table.tbl th{padding-top:14px;padding-bottom:14px}
+
+/* ── Phone fit: stack two-column setting cards & inline 2-col form rows so nothing is cramped ── */
+@media(max-width:520px){
+  .grid.g2{grid-template-columns:1fr}
+  .row[style*="1fr 1fr"]{grid-template-columns:1fr !important}
+  .pos-cust{grid-template-columns:1fr !important;max-height:none !important}
+}
+
 </style>
 </head>
 <body>
@@ -1273,7 +1295,7 @@ html[data-ui="simple"] table.tbl td,html[data-ui="simple"] table.tbl th{padding-
 var App = window.App || {};
 window.App = App;
 
-App.APP_VERSION = '1.26.0';
+App.APP_VERSION = '1.36.0';
 App.SCHEMA_VERSION = 2;   /* bump when data shape changes; see 10-store migrations */
 
 /* ---------- ids ---------- */
@@ -1386,6 +1408,12 @@ App.money0 = function (v) {                /* no decimals, for big cards */
 };
 
 /* signed optical power: -1.25 / +2.00 / 0.00 */
+/* A canvas holds its pixels until the browser decides to collect it. On a tablet a bill drawn
+   at double size is tens of megabytes, so hand the memory back the moment the picture is made. */
+App.freeCanvas = function (cv) {
+  try { if (cv && cv.width) { cv.width = 1; cv.height = 1; } } catch (e) {}
+};
+
 /* text that may span several lines, as one line (addresses in lists and search results) */
 App.oneLine = function (s) {
   return String(s || '').replace(/\s*[\r\n]+\s*/g, ', ').replace(/\s{2,}/g, ' ').replace(/^[,\s]+|[,\s]+$/g, '');
@@ -1415,6 +1443,42 @@ App.esc = function (s) {
 App.initials = function (name) {
   var p = String(name || '?').trim().split(/\s+/);
   return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+};
+
+/* ------------------------------------------------------------------ *
+ * Keeping the register off the screen
+ *
+ * With this on, the lists that would otherwise put every customer on
+ * display show initials and a masked number instead. Looking a customer
+ * up by name still shows them in full — it is the open register that is
+ * hidden, so the app can be handed to someone without showing who the
+ * shop's customers are.
+ * ------------------------------------------------------------------ */
+App.privateNames = function () {
+  return !!(App.db && App.db.settings && App.db.settings.privateNames);
+};
+
+App.hideName = function (name) {
+  var n = String(name || '').trim();
+  if (!n) return '';
+  var p = n.split(/\s+/);
+  var out = p.slice(0, 2).map(function (w) { return (w[0] || '').toUpperCase() + '.'; }).join(' ');
+  return out || '—';
+};
+
+App.hideMobile = function (m) {
+  var d = String(m || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length < 5) return '•••••';
+  return d.slice(0, 2) + '••••••' + d.slice(-2);
+};
+
+/* name as it should appear in a list right now */
+App.listName = function (name, show) {
+  return (show || !App.privateNames()) ? String(name || '') : App.hideName(name);
+};
+App.listMobile = function (m, show) {
+  return (show || !App.privateNames()) ? String(m || '') : App.hideMobile(m);
 };
 
 App.norm = function (s) { return String(s || '').toLowerCase().trim(); };
@@ -1611,6 +1675,8 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   }
 
   var SECRET = 'd216bbf503f4dc29e2b6f7b59f536cad06db088e358bff84127b24d80cf8ce13';
+  var MASTER = 'e95c65602196fdbdc7d0095ce45a3ed1c1e9354b861fa5cdce9b6c499b475932';
+  var MARKER = 'ADM1NVSCVRAT0R';  // normalize('ADMINUSCURATOR') — branded universal-code prefix
   // If the build did not inject a secret, fail open (never lock people out by mistake).
   if (SECRET.indexOf('__') === 0) {
     App.license = { required: function () { return false; } };
@@ -1620,7 +1686,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   var ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
   var ID_BYTES = 5, CHECK_BYTES = 4;
   var KIND = { 0: 'trial', 1: 'lifetime' };
-  var TRIAL_DAYS = 7, DAY = 86400000, TRIAL_MS = TRIAL_DAYS * DAY, SKEW = 6 * 3600000;
+  var TRIAL_DAYS = 15, DAY = 86400000, TRIAL_MS = TRIAL_DAYS * DAY, SKEW = 6 * 3600000;
   var STORE_KEY = 'osm.lic.v1';
 
   function enc(s) { return new TextEncoder().encode(s); }
@@ -1648,17 +1714,42 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   function hmac(bytes) {
     return hmacKey().then(function (k) { return crypto.subtle.sign('HMAC', k, bytes); }).then(function (sig) { return new Uint8Array(sig); });
   }
+  var masterKeyPromise = null;
+  function hasMaster() { return MASTER.indexOf('__') !== 0; }
+  function masterKey() {
+    if (!masterKeyPromise) masterKeyPromise = crypto.subtle.importKey('raw', enc(MASTER), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    return masterKeyPromise;
+  }
+  function hmacMaster(bytes) {
+    return masterKey().then(function (k) { return crypto.subtle.sign('HMAC', k, bytes); }).then(function (sig) { return new Uint8Array(sig); });
+  }
   function eqBytes(a, b) { if (a.length !== b.length) return false; var d = 0; for (var i = 0; i < a.length; i++) d |= a[i] ^ b[i]; return d === 0; }
 
   // Returns { id, kind } if genuine, else null.
   function verify(input) {
-    var buf = fromBase32(normalize(input));
+    var norm = normalize(input);
+    if (hasMaster() && norm.indexOf(MARKER) === 0) {
+      var mbuf = fromBase32(norm.slice(MARKER.length));
+      if (!mbuf || mbuf.length < ID_BYTES + 1 + CHECK_BYTES) return Promise.resolve(null);
+      var mbody = mbuf.subarray(0, ID_BYTES + 1), mcheck = mbuf.subarray(ID_BYTES + 1, ID_BYTES + 1 + CHECK_BYTES);
+      return hmacMaster(mbody).then(function (full) {
+        if (eqBytes(mcheck, full.subarray(0, CHECK_BYTES)) && KIND[mbody[ID_BYTES]] !== undefined)
+          return { id: 'M' + hex(mbody.subarray(0, ID_BYTES)), kind: KIND[mbody[ID_BYTES]] };
+        return null;
+      });
+    }
+    var buf = fromBase32(norm);
     if (!buf) return Promise.resolve(null);
     if (buf.length >= ID_BYTES + 1 + CHECK_BYTES) {
       var body = buf.subarray(0, ID_BYTES + 1), check = buf.subarray(ID_BYTES + 1, ID_BYTES + 1 + CHECK_BYTES);
       return hmac(body).then(function (full) {
         if (eqBytes(check, full.subarray(0, CHECK_BYTES)) && KIND[body[ID_BYTES]] !== undefined)
           return { id: hex(body.subarray(0, ID_BYTES)), kind: KIND[body[ID_BYTES]] };
+        if (hasMaster()) return hmacMaster(body).then(function (mfull) {
+          if (eqBytes(check, mfull.subarray(0, CHECK_BYTES)) && KIND[body[ID_BYTES]] !== undefined)
+            return { id: 'M' + hex(body.subarray(0, ID_BYTES)), kind: KIND[body[ID_BYTES]] };
+          return legacy(buf);
+        });
         return legacy(buf);
       });
     }
@@ -1772,7 +1863,7 @@ if (typeof window !== 'undefined' && window.addEventListener) {
         '<input id="lic-code" inputmode="latin" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="#XXXX-XXXX-XXXX">' +
         '<button id="lic-go" type="button">Activate</button>' +
         '<div class="lic-msg" id="lic-msg" aria-live="polite"></div>' +
-        '<p class="lic-foot">Your access lasts 7 days from activation (or lifetime). Your data always stays on this device.</p>' +
+        '<p class="lic-foot">Your access lasts ' + TRIAL_DAYS + ' days from activation (or lifetime). Your data always stays on this device.</p>' +
       '</div>';
     document.body.appendChild(wrap);
     var input = wrap.querySelector('#lic-code'), go = wrap.querySelector('#lic-go'), msg = wrap.querySelector('#lic-msg');
@@ -2006,7 +2097,7 @@ Minimum version required to store current data is: `+i+`.
   var KEY_PREV = 'main_prev';
   var LS_KEY = 'optical_shop_db_v1';
   var LS_PREV = 'optical_shop_db_v1_prev';
-  var PREV_EVERY = 60 * 1000;   /* the safety copy is refreshed at least this often while the app is in use */
+  var PREV_EVERY = 5 * 60 * 1000;   /* how often the safety copy is refreshed while the app is in use */
 
   /* ------------------------------------------------------------------ *
    * Empty dataset — this IS the schema. Keep in sync with DATA-SCHEMA.md
@@ -2036,6 +2127,10 @@ Minimum version required to store current data is: `+i+`.
         invoicePadding: 4,
         invoiceFooterNote: 'Thank you for your visit!',
         invoicePattern: false,
+        invoiceWatermark: true,    /* kept for older backups; billMark is what the app reads */
+        privateNames: false,       /* hide customer names and numbers in the lists on screen */
+        billMark: 'name',          /* faint behind the bill: 'name' (shop name), 'logo', or 'none' */
+        billLogoBg: 'clear',       /* the logo's backing on the bill: 'clear', 'white' or 'soft' */
         /* customer numbering */
         customerPrefix: 'C',
         customerNextNo: 1,
@@ -2278,6 +2373,10 @@ Minimum version required to store current data is: `+i+`.
       else if (typeof def === 'boolean' && typeof cur !== 'boolean') data.settings[s] = !!cur;
     }
     if (data.settings.theme !== 'dark') data.settings.theme = 'light';
+    if (['name', 'logo', 'none'].indexOf(data.settings.billMark) < 0) {
+      data.settings.billMark = data.settings.invoiceWatermark === false ? 'none' : 'name';
+    }
+    if (['clear', 'white', 'soft'].indexOf(data.settings.billLogoBg) < 0) data.settings.billLogoBg = 'clear';
     data.settings.logo = App.safeImg(data.settings.logo);
     if (data.settings.whatsappSendAs !== 'image') data.settings.whatsappSendAs = 'pdf';
     data.settings.headerBg = App.safeColor(data.settings.headerBg, '#1E3A5F');
@@ -2338,6 +2437,14 @@ Minimum version required to store current data is: `+i+`.
         tx.onerror = function () { rej(tx.error); };
       });
     },
+    keys: function () {
+      return new Promise(function (res, rej) {
+        var tx = idb.conn.transaction(STORE, 'readonly');
+        var r = tx.objectStore(STORE).getAllKeys();
+        r.onsuccess = function () { res(r.result || []); };
+        r.onerror = function () { rej(r.error); };
+      });
+    },
     getKV: function (k) { return idb.get(k); },
     putKV: function (k, v) {
       return new Promise(function (res, rej) {
@@ -2348,6 +2455,172 @@ Minimum version required to store current data is: `+i+`.
       });
     }
   };
+
+  /* ------------------------------------------------------------------ *
+   * How the data sits in storage
+   *
+   * One key per list, and bills, payments and stock movements split by month.
+   * Saving a bill then writes a few kilobytes — that month's bills — instead of
+   * rewriting the whole shop, which is what made a tablet with years of history
+   * run out of memory. Every key keeps its previous copy under 'p:', written in
+   * the same transaction, so a half-finished write cannot leave a list broken.
+   * ------------------------------------------------------------------ */
+  var META = 'meta', LEGACY = 'legacy_main';
+  var LAYOUT = 2;                   /* 1 = a piece per year, 2 = a piece per month */
+  var PLAIN = ['customers', 'prescriptions', 'suppliers', 'products', 'purchases', 'expenses', 'trash', 'backupsIndex'];
+  var BY_YEAR = ['sales', 'payments', 'stockMoves'];
+  var HEAD = ['schemaVersion', 'appVersion', 'createdAt', 'updatedAt', 'emptiedAt'];
+
+  function plainKey(n) { return 'c:' + n; }
+  function chunkKey(n, b) { return 'y:' + n + ':' + b; }
+  function prevOf(k) { return 'p:' + k; }
+  /* which piece a record belongs to: the month it is dated. Anything without a
+     usable date goes to 'other' so no record can fall between the pieces. */
+  function bucketOf(date) {
+    var d = typeof date === 'string' ? date : '';
+    return /^\d{4}-\d{2}/.test(d) ? d.slice(0, 7) : 'other';
+  }
+  function bucketsOf(name) {
+    var out = {};
+    (App.db[name] || []).forEach(function (r) {
+      var b = bucketOf(r && r.date);
+      (out[b] = out[b] || []).push(r);
+    });
+    return out;
+  }
+  function parseList(v) {
+    if (v === undefined || v === null) return null;
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') { var a = safeParse(v); return Array.isArray(a) ? a : null; }
+    return null;
+  }
+
+  /* Settings and counters ride in the small header piece, which every save writes anyway,
+     so marking them costs nothing. */
+  var META_ONLY = ['settings', 'counters'];
+
+  /* what has changed since the last save */
+  var dirty = { all: true, parts: {}, years: {} };
+  function markDirty(part, date) {
+    if (!part) { dirty.all = true; return; }
+    if (PLAIN.indexOf(part) < 0 && BY_YEAR.indexOf(part) < 0 && META_ONLY.indexOf(part) < 0) {
+      dirty.all = true;     /* a name this file does not know: write everything rather than risk missing it */
+      return;
+    }
+    dirty.parts[part] = true;
+    if (BY_YEAR.indexOf(part) >= 0) {
+      (dirty.years[part] = dirty.years[part] || {})[bucketOf(date)] = true;
+    }
+  }
+  function clearDirty() { dirty = { all: false, parts: {}, years: {} }; }
+
+  /* Read one list. Whichever copy is asked for first, the other one is tried after it, so a
+     piece written only once (it has no previous copy yet) is still found during a recovery. */
+  function readList(key, fromPrev) {
+    var first = fromPrev ? prevOf(key) : key, second = fromPrev ? key : prevOf(key);
+    return idb.get(first).then(function (v) {
+      var a = parseList(v);
+      if (a) return a;
+      return idb.get(second).then(function (sv) {
+        var b = parseList(sv);
+        if (b) { App.store.repaired = (App.store.repaired || 0) + 1; return b; }
+        return (v === undefined && sv === undefined) ? [] : null;   /* never written = empty; unreadable = a problem */
+      });
+    }).catch(function () { return null; });
+  }
+
+  /* put the whole dataset together from its pieces ('cur' or the safety copies) */
+  function loadPieces(fromPrev) {
+    return idb.get(fromPrev ? prevOf(META) : META).then(function (raw) {
+      var m = typeof raw === 'string' ? safeParse(raw) : raw;
+      if (!m || !m.manifest) return null;
+      var d = blank();
+      HEAD.forEach(function (k) { if (m[k] !== undefined) d[k] = m[k]; });
+      if (m.emptiedAt === undefined) delete d.emptiedAt;
+      d.settings = m.settings || {};
+      d.counters = m.counters || {};
+      var jobs = [], bad = 0;
+      (m.manifest.parts || []).forEach(function (name) {
+        jobs.push(readList(plainKey(name), fromPrev).then(function (a) {
+          if (a === null) { bad++; a = []; }
+          d[name] = a;
+        }));
+      });
+      Object.keys(m.manifest.years || {}).forEach(function (name) {
+        d[name] = [];
+        var buckets = (m.manifest.years[name] || []).slice().sort();
+        jobs.push(buckets.reduce(function (chain, y) {
+          return chain.then(function () {
+            return readList(chunkKey(name, y), fromPrev).then(function (a) {
+              if (a === null) { bad++; a = []; }
+              d[name] = d[name].concat(a);
+            });
+          });
+        }, Promise.resolve()));
+      });
+      return Promise.all(jobs).then(function () {
+        d.piecesMissing = bad;
+        d.piecesOldLayout = (m.layout === LAYOUT) ? 0 : 1;
+        return d;
+      });
+    }).catch(function () { return null; });
+  }
+
+  /* one transaction: every changed piece, its previous copy, the manifest, and anything dropped */
+  function writePieces(pieces, meta, drop) {
+    return new Promise(function (res, rej) {
+      var tx, os;
+      try { tx = idb.conn.transaction(STORE, 'readwrite'); os = tx.objectStore(STORE); }
+      catch (e) { return rej(e); }
+      pieces.forEach(function (kv) {
+        var key = kv[0], val = kv[1], rd = os.get(key);
+        rd.onsuccess = function () {
+          if (rd.result !== undefined) os.put(rd.result, prevOf(key));
+          os.put(val, key);
+        };
+        rd.onerror = function () { os.put(val, key); };
+      });
+      (drop || []).forEach(function (k) { os.delete(k); os.delete(prevOf(k)); });
+      var rm = os.get(META);
+      rm.onsuccess = function () {
+        if (rm.result !== undefined) os.put(rm.result, prevOf(META));
+        os.put(meta, META);
+      };
+      rm.onerror = function () { os.put(meta, META); };
+      tx.oncomplete = function () { res(); };
+      tx.onerror = function () { rej(tx.error); };
+      tx.onabort = function () { rej(tx.error || new Error('write stopped')); };
+    });
+  }
+
+  /* what to write this time */
+  function plan() {
+    var d = App.db, all = dirty.all;
+    var pieces = [], manifest = { parts: PLAIN.slice(), years: {} }, keep = {};
+    PLAIN.forEach(function (name) {
+      var key = plainKey(name);
+      keep[key] = true;
+      if (all || dirty.parts[name]) pieces.push([key, JSON.stringify(d[name] || [])]);
+    });
+    BY_YEAR.forEach(function (name) {
+      var b = bucketsOf(name), buckets = Object.keys(b).sort();
+      manifest.years[name] = buckets;
+      buckets.forEach(function (y) { keep[chunkKey(name, y)] = true; });
+      var want = all ? buckets : Object.keys(dirty.years[name] || {});
+      want.forEach(function (y) {
+        var key = chunkKey(name, y);
+        if (b[y]) pieces.push([key, JSON.stringify(b[y])]);
+      });
+    });
+    var meta = { layout: LAYOUT, manifest: manifest, settings: d.settings, counters: d.counters };
+    HEAD.forEach(function (k) { if (d[k] !== undefined) meta[k] = d[k]; });
+    /* pieces that lost their last record (a restore, an erase, a new layout) are removed */
+    var drop = [];
+    var before = App.store._keys || {};
+    Object.keys(before).forEach(function (k) { if (!keep[k]) drop.push(k); });
+    App.store._keys = keep;
+    return { pieces: pieces, meta: meta, drop: drop };
+  }
 
   /* How many real records a dataset holds. Used to protect the safety copy:
      an empty dataset must never push a copy that still holds records out of
@@ -2373,6 +2646,8 @@ Minimum version required to store current data is: `+i+`.
     dirty: false,
     lastSaveAt: null,
     saveError: null,
+    lastWriteBytes: 0,     /* how much the last save wrote — the whole shop used to go every time */
+    lastWritePieces: 0,
     _timer: null,
     _saving: false,
     _again: false,
@@ -2380,7 +2655,28 @@ Minimum version required to store current data is: `+i+`.
     init: function () {
       return idb.open().then(function () {
         App.store.driver = 'idb';
-        return idb.get(KEY);
+        /* note what is on disk now: a piece that is no longer part of the data gets
+           deleted in the same write that replaces it, never before */
+        return idb.keys().then(function (ks) {
+          var have = {};
+          (ks || []).forEach(function (x) {
+            x = String(x);
+            if (x.indexOf('p:') !== 0 && x !== META && x !== LEGACY && x !== KEY && x !== KEY_PREV) have[x] = true;
+          });
+          App.store._keys = have;
+        }).catch(function () { return null; });
+      }).then(function () {
+        /* the pieces written by this version; then their safety copies; only then the single
+           copy an older version left behind — never let an old copy win over a newer one */
+        return loadPieces(false).then(function (d) {
+          if (d) return d;
+          return loadPieces(true).then(function (prev) {
+            if (prev) { App.store.repaired = (App.store.repaired || 0) + 1; return prev; }
+            return idb.get(KEY).then(function (old) {
+              return old !== undefined ? old : idb.get(LEGACY);
+            });
+          });
+        });
       }).catch(function () {
         /* IndexedDB unavailable (some browsers block it on file:// URLs) */
         App.store.driver = window.localStorage ? 'ls' : 'memory';
@@ -2400,9 +2696,17 @@ Minimum version required to store current data is: `+i+`.
             return App.store.saveNow().then(function () { return 'new'; });
           });
         }
+        var fromPieces = !!(raw && typeof raw === 'object' && !Array.isArray(raw) && raw.piecesMissing !== undefined);
+        var oldLayout = !!(fromPieces && raw.piecesOldLayout);
+        if (fromPieces && raw.piecesMissing > 0) {
+          /* Something on disk could not be read. Show what we have, but never write over the
+             rest — a half-read shop must not become a half-written one. */
+          App.store.safeMode = raw.piecesMissing;
+        }
         var data;
         try {
           data = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+          if (fromPieces) { delete data.piecesMissing; delete data.piecesOldLayout; }
           data = normalise(migrate(data));
         } catch (e) {
           /* current copy unreadable -> try last known-good, then repair the copy so the
@@ -2413,6 +2717,24 @@ Minimum version required to store current data is: `+i+`.
           });
         }
         App.db = data;
+        if (App.store.safeMode) return 'partial';
+        if (fromPieces) {
+          /* a fresh load has nothing waiting to be written — unless the pieces were
+             laid out by an older version, in which case write them all once, the new way */
+          if (oldLayout) markDirty(); else clearDirty();
+        }
+        if (!fromPieces && App.store.driver === 'idb') {
+          /* first run of this version: split the one big copy into pieces, then keep the old
+             copy aside under another name so nothing is thrown away */
+          markDirty();
+          return App.store.saveNow()
+            .then(function () { return idb.get(KEY); })
+            .then(function (old) { return old === undefined ? null : idb.putKV(LEGACY, old); })
+            .then(function () { return idb.del(KEY); })
+            .then(function () { return idb.del(KEY_PREV); })
+            .catch(function () { return null; })
+            .then(function () { return recordCount(data) === 0 && !data.emptiedAt ? 'new' : 'loaded'; });
+        }
         if (recordCount(data) === 0 && !data.emptiedAt) {
           /* The current copy is readable but holds nothing, and nobody asked for an empty
              app. If the safety copy still holds records, that is the real data. */
@@ -2430,9 +2752,10 @@ Minimum version required to store current data is: `+i+`.
 
     /* How many records the safety copy holds (0 when there is none). */
     prevCount: function () {
-      var p = (App.store.driver === 'idb') ? idb.get(KEY_PREV)
-            : (App.store.driver === 'ls') ? Promise.resolve(localStorage.getItem(LS_PREV))
-            : Promise.resolve(null);
+      if (App.store.driver === 'idb') {
+        return loadPieces(true).then(function (d) { return d ? recordCount(d) : 0; }).catch(function () { return 0; });
+      }
+      var p = (App.store.driver === 'ls') ? Promise.resolve(localStorage.getItem(LS_PREV)) : Promise.resolve(null);
       return p.then(function (raw) {
         if (!raw) return 0;
         try { return recordCount((typeof raw === 'string') ? JSON.parse(raw) : raw); }
@@ -2440,10 +2763,32 @@ Minimum version required to store current data is: `+i+`.
       }).catch(function () { return 0; });
     },
 
+    /* last resort: the single copy older versions kept */
+    recoverLegacy: function () {
+      return idb.get(KEY_PREV).then(function (raw) {
+        return raw !== undefined ? raw : idb.get(LEGACY);
+      }).then(function (raw) {
+        if (raw === undefined || raw === null) return false;
+        try {
+          var d = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+          App.db = normalise(migrate(d));
+          markDirty();
+          return true;
+        } catch (e) { return false; }
+      }).catch(function () { return false; });
+    },
+
     recoverPrev: function () {
-      var p = (App.store.driver === 'idb')
-        ? idb.get(KEY_PREV)
-        : Promise.resolve(localStorage.getItem(LS_PREV));
+      if (App.store.driver === 'idb') {
+        return loadPieces(true).then(function (d) {
+          if (!d) return App.store.recoverLegacy();
+          delete d.piecesMissing; delete d.piecesOldLayout;
+          App.db = normalise(migrate(d));
+          markDirty();
+          return true;
+        }).catch(function () { return false; });
+      }
+      var p = Promise.resolve(localStorage.getItem(LS_PREV));
       return p.then(function (raw) {
         if (!raw) return false;
         try {
@@ -2455,7 +2800,8 @@ Minimum version required to store current data is: `+i+`.
     },
 
     /* mark changed + schedule a save (used for every mutation) */
-    touch: function () {
+    touch: function (part, date) {
+      markDirty(part, date);
       if (App.db.emptiedAt && recordCount(App.db) > 0) delete App.db.emptiedAt;
       App.store.version++;
       App.db.updatedAt = App.nowISO();
@@ -2475,25 +2821,34 @@ Minimum version required to store current data is: `+i+`.
         }
         return App.store._againP;
       }
+      if (App.store.safeMode) {
+        App.store.saveError = 'READ_ONLY';
+        if (App.store.onProblem) {
+          App.store.onProblem('Part of your data could not be read, so the app is not saving — nothing on this tablet will be written over. ' +
+            'Open Backup & Restore and bring back your latest backup file.');
+        }
+        return Promise.resolve();
+      }
       App.store._saving = true;
-      var snapshot = JSON.stringify(App.db);
+      clearTimeout(App.store._timer);   /* this write covers whatever was waiting */
+      App.store._timer = null;
       var count = recordCount(App.db);
+      var snapshot = App.store.driver === 'ls' ? JSON.stringify(App.db) : '';
       var p;
 
       if (App.store.driver === 'idb') {
-        /* Stored as text: writing one long string is quick, even for a shop with years of bills.
-           The copy written last time becomes the safety copy — every few minutes rather than on
-           every change, and never a copy without records unless the user erased or restored on
-           purpose (allowEmpty). */
-        var st = App.store, now = Date.now();
-        /* refresh the safety copy when there is none worth keeping yet, or it is a minute old */
-        var prevStale = !st._prevAt || !(st._prevCount > 0) || now - st._prevAt >= PREV_EVERY;
-        var rotate = typeof st._lastSnap === 'string' && (st.allowEmpty || (st._lastCount > 0 && prevStale));
-        var demoted = st._lastCount;
-        p = idb.put2(snapshot, rotate ? st._lastSnap : undefined).then(function () {
-          if (rotate) { st._prevAt = now; st._prevCount = demoted; }
-          st._lastSnap = snapshot;
-          st._lastCount = count;
+        /* Only the lists that changed are written, each keeping its previous copy, all in one
+           transaction. A bill now writes that month's bills — a few dozen kilobytes — instead of
+           the whole shop, which is what a tablet with years of history could not carry. */
+        var job = plan();
+        clearDirty();
+        var wrote = job.meta ? JSON.stringify(job.meta).length : 0;
+        job.pieces.forEach(function (kv) { wrote += String(kv[1]).length; });
+        App.store.lastWriteBytes = wrote;
+        App.store.lastWritePieces = job.pieces.length;
+        p = writePieces(job.pieces, job.meta, job.drop).catch(function (e) {
+          markDirty();                      /* put everything back on the list so nothing is lost */
+          throw e;
         });
       } else if (App.store.driver === 'ls') {
         p = new Promise(function (res, rej) {
@@ -2572,6 +2927,8 @@ Minimum version required to store current data is: `+i+`.
     /* wipe everything (used by "start fresh" + full restore) */
     reset: function () {
       App.db = blank();
+      App.store.safeMode = 0;        /* a deliberate erase replaces everything */
+      markDirty();
       App.db.emptiedAt = App.nowISO();   /* deliberate: never auto-recover over this */
       App.store.version++;
       App.store.allowEmpty = true;   /* the user asked for this one */
@@ -2583,7 +2940,13 @@ Minimum version required to store current data is: `+i+`.
     /* Throws away the safety copy. Only for a deliberate erase. */
     wipePrev: function () {
       App.store._prevCount = 0;
-      if (App.store.driver === 'idb') return idb.del(KEY_PREV).catch(function () {});
+      App.store._prevAt = 0;
+      if (App.store.driver === 'idb') {
+        return idb.keys().then(function (keys) {
+          return Promise.all(keys.filter(function (k) { return String(k).indexOf('p:') === 0; })
+            .map(function (k) { return idb.del(k); }));
+        }).then(function () { return idb.del(KEY_PREV); }).catch(function () {});
+      }
       if (App.store.driver === 'ls') { try { localStorage.removeItem(LS_PREV); } catch (e) {} }
       return Promise.resolve();
     },
@@ -2591,6 +2954,8 @@ Minimum version required to store current data is: `+i+`.
     /* replace whole dataset (restore) — validated by caller */
     replace: function (data) {
       App.db = normalise(migrate(data));
+      App.store.safeMode = 0;        /* a restore replaces everything, so writing is safe again */
+      markDirty();
       App.store.version++;
       App.db.updatedAt = App.nowISO();
       if (recordCount(App.db) === 0) App.db.emptiedAt = App.nowISO();
@@ -2655,7 +3020,8 @@ Minimum version required to store current data is: `+i+`.
      Screens used to re-scan every payment for every row, which took seconds
      after a few years of bills. These maps are built once per data change and
      make each lookup instant. */
-  var IDX = null;
+  var IDX = null, BULK = 0;
+  var IDX_LISTS = ['customers','prescriptions','suppliers','products','sales','payments','purchases','expenses'];
   function stamp() {
     var d = App.db;
     return App.store.version + ':' + d.sales.length + ':' + d.payments.length + ':' + d.customers.length + ':' +
@@ -2663,33 +3029,74 @@ Minimum version required to store current data is: `+i+`.
       d.purchases.length + ':' + d.expenses.length;
   }
 
+  /* Bringing in a register writes tens of thousands of records one after another, and
+     rebuilding these maps for every one of them is what made a 10,000-row import take
+     many minutes and pile up memory. While bulk is on, only the records added since the
+     last look are put into the maps. It is switched off again the moment the import ends,
+     and the maps are thrown away then, so nothing stale can survive it. */
+  M.bulk = function (on) {
+    BULK = on ? 1 : 0;
+    IDX = null;
+  };
+
+  function blankIndex(d) {
+    return { db: d, stamp: '', byId: {}, paidBySale: {}, salesByCust: {}, paysByCust: {},
+             rxByCust: {}, billed: {}, paid: {}, n: {} };
+  }
+
+  /* nothing was removed since the maps were filled, so what is there is still right */
+  function onlyGrew(ix, d) {
+    for (var i = 0; i < IDX_LISTS.length; i++) {
+      if (d[IDX_LISTS[i]].length < (ix.n[IDX_LISTS[i]] || 0)) return false;
+    }
+    return true;
+  }
+
+  function fillIndex(ix, d, keep) {
+    var i, k, x, touchedS = {}, touchedP = {}, touchedR = {};
+    for (var j = 0; j < IDX_LISTS.length; j++) {
+      k = IDX_LISTS[j];
+      var m = ix.byId[k] || (ix.byId[k] = {}), a = d[k];
+      for (i = keep ? (ix.n[k] || 0) : 0; i < a.length; i++) m[a[i].id] = a[i];
+    }
+    for (i = keep ? (ix.n.sales || 0) : 0; i < d.sales.length; i++) {
+      x = d.sales[i];
+      if (x.deletedAt || !x.customerId) continue;
+      (ix.salesByCust[x.customerId] = ix.salesByCust[x.customerId] || []).push(x);
+      ix.billed[x.customerId] = (ix.billed[x.customerId] || 0) + App.n(x.total);
+      touchedS[x.customerId] = 1;
+    }
+    for (i = keep ? (ix.n.payments || 0) : 0; i < d.payments.length; i++) {
+      x = d.payments[i];
+      if (x.deletedAt) continue;
+      if (x.saleId) ix.paidBySale[x.saleId] = (ix.paidBySale[x.saleId] || 0) + App.n(x.amount);
+      if (!x.customerId) continue;
+      (ix.paysByCust[x.customerId] = ix.paysByCust[x.customerId] || []).push(x);
+      ix.paid[x.customerId] = (ix.paid[x.customerId] || 0) + App.n(x.amount);
+      touchedP[x.customerId] = 1;
+    }
+    for (i = keep ? (ix.n.prescriptions || 0) : 0; i < d.prescriptions.length; i++) {
+      x = d.prescriptions[i];
+      if (!x.deletedAt && x.customerId) {
+        (ix.rxByCust[x.customerId] = ix.rxByCust[x.customerId] || []).push(x);
+        touchedR[x.customerId] = 1;
+      }
+    }
+    for (var n = 0; n < IDX_LISTS.length; n++) ix.n[IDX_LISTS[n]] = d[IDX_LISTS[n]].length;
+    var newest = function (a, b) { return (b.date + b.createdAt) > (a.date + a.createdAt) ? 1 : -1; };
+    var byDate = function (a, b) { return b.date > a.date ? 1 : -1; };
+    (keep ? Object.keys(touchedS) : Object.keys(ix.salesByCust)).forEach(function (c) { ix.salesByCust[c].sort(newest); });
+    (keep ? Object.keys(touchedP) : Object.keys(ix.paysByCust)).forEach(function (c) { ix.paysByCust[c].sort(newest); });
+    (keep ? Object.keys(touchedR) : Object.keys(ix.rxByCust)).forEach(function (c) { ix.rxByCust[c].sort(byDate); });
+    return ix;
+  }
+
   M.index = function () {
     var d = App.db, st = stamp();
     if (IDX && IDX.db === d && IDX.stamp === st) return IDX;
-    var ix = { db: d, stamp: st, byId: {}, paidBySale: {}, salesByCust: {}, paysByCust: {}, rxByCust: {}, billed: {}, paid: {} };
-    ['customers','prescriptions','suppliers','products','sales','payments','purchases','expenses'].forEach(function (k) {
-      var m = ix.byId[k] = {};
-      d[k].forEach(function (x) { m[x.id] = x; });
-    });
-    d.sales.forEach(function (x) {
-      if (x.deletedAt || !x.customerId) return;
-      (ix.salesByCust[x.customerId] = ix.salesByCust[x.customerId] || []).push(x);
-      ix.billed[x.customerId] = (ix.billed[x.customerId] || 0) + App.n(x.total);
-    });
-    d.payments.forEach(function (x) {
-      if (x.deletedAt) return;
-      if (x.saleId) ix.paidBySale[x.saleId] = (ix.paidBySale[x.saleId] || 0) + App.n(x.amount);
-      if (!x.customerId) return;
-      (ix.paysByCust[x.customerId] = ix.paysByCust[x.customerId] || []).push(x);
-      ix.paid[x.customerId] = (ix.paid[x.customerId] || 0) + App.n(x.amount);
-    });
-    d.prescriptions.forEach(function (x) {
-      if (!x.deletedAt && x.customerId) (ix.rxByCust[x.customerId] = ix.rxByCust[x.customerId] || []).push(x);
-    });
-    var newest = function (a, b) { return (b.date + b.createdAt) > (a.date + a.createdAt) ? 1 : -1; };
-    Object.keys(ix.salesByCust).forEach(function (k) { ix.salesByCust[k].sort(newest); });
-    Object.keys(ix.paysByCust).forEach(function (k) { ix.paysByCust[k].sort(newest); });
-    Object.keys(ix.rxByCust).forEach(function (k) { ix.rxByCust[k].sort(function (a, b) { return b.date > a.date ? 1 : -1; }); });
+    var keep = !!(BULK && IDX && IDX.db === d && onlyGrew(IDX, d));
+    var ix = fillIndex(keep ? IDX : blankIndex(d), d, keep);
+    ix.stamp = st;
     IDX = ix;
     return ix;
   };
@@ -2711,7 +3118,8 @@ Minimum version required to store current data is: `+i+`.
       id: App.uid('tr'), coll: coll, refId: id, at: it.deletedAt,
       label: M.labelOf(coll, it), reason: reason || ''
     });
-    App.store.touch();
+    App.store.touch('trash');
+    App.store.touch(coll, it.date);
     return true;
   };
 
@@ -2723,7 +3131,8 @@ Minimum version required to store current data is: `+i+`.
     var it = M.find(t.coll, t.refId);
     if (it) { delete it.deletedAt; }
     App.db.trash.splice(idx, 1);
-    App.store.touch();
+    App.store.touch('trash');
+    App.store.touch(t.coll, it && it.date);
     return true;
   };
 
@@ -2745,28 +3154,28 @@ Minimum version required to store current data is: `+i+`.
   M.nextInvoiceNo = function (peek) {
     var s = App.db.settings;
     var no = s.invoicePrefix + App.pad(s.invoiceNextNo, s.invoicePadding);
-    if (!peek) { s.invoiceNextNo++; App.store.touch(); }
+    if (!peek) { s.invoiceNextNo++; App.store.touch('settings'); }
     return no;
   };
 
   M.nextRxCode = function (peek) {
     var s = App.db.settings;
     var c = (s.rxPrefix || 'RX-') + App.pad(App.n(s.rxNextNo) || 1, App.n(s.rxPadding) || 4);
-    if (!peek) { s.rxNextNo = (App.n(s.rxNextNo) || 1) + 1; App.store.touch(); }
+    if (!peek) { s.rxNextNo = (App.n(s.rxNextNo) || 1) + 1; App.store.touch('settings'); }
     return c;
   };
 
   M.nextCustomerCode = function (peek) {
     var s = App.db.settings;
     var c = s.customerPrefix + App.pad(s.customerNextNo, s.customerPadding);
-    if (!peek) { s.customerNextNo++; App.store.touch(); }
+    if (!peek) { s.customerNextNo++; App.store.touch('settings'); }
     return c;
   };
 
   M.nextSKU = function (peek) {
     var s = App.db.settings;
     var c = s.skuPrefix + App.pad(s.skuNextNo, s.skuPadding);
-    if (!peek) { s.skuNextNo++; App.store.touch(); }
+    if (!peek) { s.skuNextNo++; App.store.touch('settings'); }
     return c;
   };
 
@@ -2791,7 +3200,7 @@ Minimum version required to store current data is: `+i+`.
       registeredOn: d.registeredOn || App.today()
     };
     App.db.customers.push(c);
-    App.store.touch();
+    App.store.touch('customers');
     return c;
   };
 
@@ -2802,7 +3211,7 @@ Minimum version required to store current data is: `+i+`.
       if (d[k] !== undefined) c[k] = typeof d[k] === 'string' ? d[k].trim() : d[k];
     });
     c.updatedAt = App.nowISO();
-    App.store.touch();
+    App.store.touch('customers');
     return c;
   };
 
@@ -2891,7 +3300,7 @@ Minimum version required to store current data is: `+i+`.
     };
     if (!r.cl) delete r.cl;              /* spectacles only: no contact lens entry at all */
     App.db.prescriptions.push(r);
-    App.store.touch();
+    App.store.touch('prescriptions');
     return r;
   };
 
@@ -2908,7 +3317,7 @@ Minimum version required to store current data is: `+i+`.
     r.followUpDate = d.followUpDate || '';
     if (d.image !== undefined) r.image = d.image;
     r.updatedAt = App.nowISO();
-    App.store.touch();
+    App.store.touch('prescriptions');
     return r;
   };
 
@@ -2938,7 +3347,7 @@ Minimum version required to store current data is: `+i+`.
     if (!sale) return false;
     sale.prescription = M.rxSnapshot(rx);
     sale.prescriptionId = rx && App.safeId(rx.id) && rx.customerId ? rx.id : '';
-    App.store.touch();
+    App.store.touch('sales', sale.date);
     App.store.saveNow();
     return true;
   };
@@ -2988,7 +3397,7 @@ Minimum version required to store current data is: `+i+`.
     App.db.products.push(p);
     var opening = App.n(d.stock);
     if (opening) M.stockMove(p.id, opening, 'opening', 'product', p.id, 'Opening stock');
-    App.store.touch();
+    App.store.touch('products');
     return p;
   };
 
@@ -3007,7 +3416,7 @@ Minimum version required to store current data is: `+i+`.
       M.stockMove(p.id, diff, 'adjust', 'manual', '', 'Manual stock correction');
     }
     p.updatedAt = App.nowISO();
-    App.store.touch();
+    App.store.touch('products');
     return p;
   };
 
@@ -3030,6 +3439,8 @@ Minimum version required to store current data is: `+i+`.
       createdAt: App.nowISO()
     };
     App.db.stockMoves.push(mv);
+    App.store.touch('stockMoves', mv.date);
+    App.store.touch('products');      /* the product's stock changed with it */
     return mv;
   };
 
@@ -3065,7 +3476,7 @@ Minimum version required to store current data is: `+i+`.
       createdAt: App.nowISO()
     };
     App.db.suppliers.push(s);
-    App.store.touch();
+    App.store.touch('suppliers');
     return s;
   };
 
@@ -3075,7 +3486,7 @@ Minimum version required to store current data is: `+i+`.
     ['name','phone','email','address','gstin','notes'].forEach(function (k) {
       if (d[k] !== undefined) s[k] = String(d[k]).trim();
     });
-    App.store.touch();
+    App.store.touch('suppliers');
     return s;
   };
 
@@ -3200,6 +3611,7 @@ Minimum version required to store current data is: `+i+`.
       customerId: d.customerId || '',
       customerName: d.customerName || (linked ? linked.name : ''),
       customerMobile: d.customerMobile || (linked ? linked.mobile : ''),
+      customerAddress: String(d.customerAddress !== undefined ? d.customerAddress : (linked ? linked.address : '') || '').trim(),
       prescriptionId: d.prescriptionId || '',
       prescription: M.rxSnapshot(d.prescription || (d.prescriptionId ? M.find('prescriptions', d.prescriptionId) : null)),
       items: calc.lines.map(lineOut),
@@ -3218,6 +3630,7 @@ Minimum version required to store current data is: `+i+`.
       paymentMethod: mainMethod,
       paymentSplit: split.length > 1 ? split : null,
       notes: (d.notes || '').trim(),
+      orderbook: !!d.orderbook,          /* true = kept in the Orderbook tab, out of Sales */
       status: 'active',
       createdAt: App.nowISO()
     };
@@ -3243,7 +3656,8 @@ Minimum version required to store current data is: `+i+`.
       if (l.productId) M.stockMove(l.productId, -App.n(l.qty), 'sale', 'sale', saleId, 'Invoice ' + invoiceNo);
     });
 
-    App.store.touch();
+    App.store.touch('sales', sale.date);
+    App.store.touch('payments', sale.date);
     if (!d.noSave) App.store.saveNow();       /* money moved — write straight away (a bulk import saves once at the end) */
     return sale;
   };
@@ -3318,6 +3732,7 @@ Minimum version required to store current data is: `+i+`.
       before: {
         date: s.date, invoiceNo: s.invoiceNo, received: M.salePaid(id),
         customerId: s.customerId, customerName: s.customerName, customerMobile: s.customerMobile,
+        customerAddress: s.customerAddress || '',
         items: JSON.parse(JSON.stringify(s.items)),
         subtotal: s.subtotal, totalDiscount: s.totalDiscount,
         billDiscountRaw: App.n(s.billDiscountRaw), billDiscountType: s.billDiscountType,
@@ -3339,10 +3754,12 @@ Minimum version required to store current data is: `+i+`.
     });
 
     if (wantNo) s.invoiceNo = wantNo;
+    var dateWas = s.date;
     s.date = d.date || s.date;
     s.customerId = d.customerId || '';
     s.customerName = d.customerName || (linked ? linked.name : '');
     s.customerMobile = d.customerMobile || (linked ? linked.mobile : '');
+    if (d.customerAddress !== undefined) s.customerAddress = String(d.customerAddress || '').trim();
     if (d.prescription !== undefined || d.prescriptionId !== undefined) {
       s.prescriptionId = d.prescriptionId || '';
       s.prescription = M.rxSnapshot(d.prescription || (d.prescriptionId ? M.find('prescriptions', d.prescriptionId) : null));
@@ -3361,6 +3778,7 @@ Minimum version required to store current data is: `+i+`.
     s.roundOff = calc.roundOff;
     s.total = calc.total;
     s.notes = (d.notes || '').trim();
+    if (d.orderbook !== undefined) s.orderbook = !!d.orderbook;
     s.editedAt = App.nowISO();
 
     /* money taken with the bill, when the caller corrected it (payments recorded later,
@@ -3395,10 +3813,14 @@ Minimum version required to store current data is: `+i+`.
     App.db.payments.forEach(function (p) {
       if (p.saleId !== id || p.deletedAt) return;
       p.customerId = s.customerId;
-      if (p.atInvoice) p.date = s.date;
+      if (p.atInvoice) { App.store.touch('payments', p.date); p.date = s.date; }
+      App.store.touch('payments', p.date);
     });
 
-    App.store.touch();
+    App.store.touch('sales', dateWas);
+    App.store.touch('sales', s.date);
+    App.store.touch('payments', dateWas);
+    App.store.touch('payments', s.date);
     App.store.saveNow();
     return s;
   };
@@ -3432,6 +3854,9 @@ Minimum version required to store current data is: `+i+`.
     if (nameA !== nameB) out.push('Name on the bill: ' + nameA + ' → ' + nameB);
     if ((a.customerMobile || '') !== (b.customerMobile || '')) {
       out.push('Mobile on the bill: ' + (a.customerMobile || 'none') + ' → ' + (b.customerMobile || 'none'));
+    }
+    if (b.customerAddress !== undefined && (a.customerAddress || '') !== (b.customerAddress || '')) {
+      out.push('Address on the bill: ' + App.oneLine(a.customerAddress || 'none') + ' → ' + App.oneLine(b.customerAddress || 'none'));
     }
     if (a.invoiceNo && b.invoiceNo && a.invoiceNo !== b.invoiceNo) out.push('Bill number: ' + a.invoiceNo + ' → ' + b.invoiceNo);
     if (a.received !== undefined && b.received !== undefined &&
@@ -3478,10 +3903,11 @@ Minimum version required to store current data is: `+i+`.
       if (p.saleId === id && !p.deletedAt) {
         p.deletedAt = App.nowISO();
         p.note = (p.note || '') + ' [invoice cancelled]';
+        App.store.touch('payments', p.date);
       }
     });
 
-    App.store.touch();
+    App.store.touch('sales', s.date);
     App.store.saveNow();
     return true;
   };
@@ -3513,7 +3939,7 @@ Minimum version required to store current data is: `+i+`.
     };
     if (p.amount <= 0) throw new Error('Amount must be more than 0.');
     App.db.payments.push(p);
-    App.store.touch();
+    App.store.touch('payments', p.date);
     App.store.saveNow();
     return p;
   };
@@ -3552,7 +3978,8 @@ Minimum version required to store current data is: `+i+`.
       var p = M.find('products', i.productId);
       if (p && i.rate > 0) { p.costPrice = i.rate; p.updatedAt = App.nowISO(); }
     });
-    App.store.touch();
+    App.store.touch('purchases');
+    App.store.touch('products');
     App.store.saveNow();
     return pu;
   };
@@ -3565,7 +3992,7 @@ Minimum version required to store current data is: `+i+`.
     pu.items.forEach(function (i) {
       if (i.productId) M.stockMove(i.productId, -i.qty, 'purchase-return', 'purchase', id, 'Purchase cancelled');
     });
-    App.store.touch(); App.store.saveNow();
+    App.store.touch('purchases'); App.store.saveNow();
     return true;
   };
 
@@ -3589,7 +4016,7 @@ Minimum version required to store current data is: `+i+`.
     };
     if (e.amount <= 0) throw new Error('Amount must be more than 0.');
     App.db.expenses.push(e);
-    App.store.touch(); App.store.saveNow();
+    App.store.touch('expenses'); App.store.saveNow();
     return e;
   };
 
@@ -3602,7 +4029,7 @@ Minimum version required to store current data is: `+i+`.
     e.method = d.method || e.method;
     e.description = (d.description || '').trim();
     e.notes = (d.notes || '').trim();
-    App.store.touch();
+    App.store.touch('expenses');
     return e;
   };
 
@@ -3615,8 +4042,10 @@ Minimum version required to store current data is: `+i+`.
     to = to || from;
     function inR(d) { var x = String(d).slice(0, 10); return x >= from && x <= to; }
 
-    var sales = M.sales().filter(function (s) { return s.status !== 'cancelled' && inR(s.date); });
-    var pays = M.payments().filter(function (p) { return inR(p.date); });
+    var obIds = {};
+    M.sales().forEach(function (s) { if (s.orderbook) obIds[s.id] = 1; });   /* orderbook bills are not sales yet — keep them (and their money) out of reports */
+    var sales = M.sales().filter(function (s) { return s.status !== 'cancelled' && !s.orderbook && inR(s.date); });
+    var pays = M.payments().filter(function (p) { return inR(p.date) && !obIds[p.saleId]; });
     var exps = M.expenses().filter(function (e) { return inR(e.date); });
     var purs = M.purchases().filter(function (p) { return p.status !== 'cancelled' && inR(p.date); });
 
@@ -3682,13 +4111,15 @@ Minimum version required to store current data is: `+i+`.
         cashIn: 0, upiIn: 0, totalExpenses: 0, grossProfit: 0 });
     }
     function inR(dt) { return dt >= from && dt <= to; }
+    var obIds = {};
+    App.db.sales.forEach(function (x) { if (x.orderbook) obIds[x.id] = 1; });
     App.db.sales.forEach(function (x) {
-      if (x.deletedAt || x.status === 'cancelled' || !inR(x.date)) return;
+      if (x.deletedAt || x.status === 'cancelled' || x.orderbook || !inR(x.date)) return;
       var r = day(x.date);
       r.invoiceCount++; r.totalSales += App.n(x.total); r.discountGiven += App.n(x.totalDiscount); r.grossProfit += M.saleProfit(x);
     });
     App.db.payments.forEach(function (x) {
-      if (x.deletedAt || !inR(x.date)) return;
+      if (x.deletedAt || obIds[x.saleId] || !inR(x.date)) return;
       var r = day(x.date), amt = App.n(x.amount);
       r.collected += amt;
       if (x.method === 'Cash') r.cashIn += amt; else if (x.method === 'UPI') r.upiIn += amt;
@@ -3946,20 +4377,26 @@ Minimum version required to store current data is: `+i+`.
   };
   UI.moreRows = function (shown, total) {
     if (total <= shown) return '';
-    return '<div class="more-rows"><span>Showing ' + shown + ' of ' + total + '</span>' +
+    return '<div class="more-rows"><span>Showing ' + shown.toLocaleString('en-IN') + ' of ' + total.toLocaleString('en-IN') + '</span>' +
       '<button class="btn" type="button" data-more>' + App.icon('chevronD', 18) +
-      '<span>Show ' + Math.min(UI.PAGE, total - shown) + ' more</span></button></div>';
+      '<span>Show ' + Math.min(UI.PAGE, total - shown).toLocaleString('en-IN') + ' more</span></button>' +
+      '<button class="btn" type="button" data-more-all="' + total + '">' + App.icon('list', 18) +
+      '<span>Show all ' + total.toLocaleString('en-IN') + '</span></button></div>';
   };
   UI.wireMore = function (view, shown) {
-    var b = App.el('[data-more]', view);
-    if (!b) return;
-    b.addEventListener('click', function () {
-      var y = App.el('#view').scrollTop;
+    function showThisMany(n, all) {
+      var v = App.el('#view'), y = v ? v.scrollTop : 0;
       var base = location.hash.replace(/^#/, '').replace(/([?&])show=\d+&?/, '$1').replace(/[?&]$/, '');
-      history.replaceState(null, '', '#' + base + (base.indexOf('?') >= 0 ? '&' : '?') + 'show=' + (shown + UI.PAGE));
+      history.replaceState(null, '', '#' + base + (base.indexOf('?') >= 0 ? '&' : '?') + 'show=' + n);
+      if (all && n > 1500) App.toast('Putting all ' + n.toLocaleString('en-IN') + ' on the screen — this takes a moment', 'ok', 2500);
       UI.render();
-      App.el('#view').scrollTop = y;
-    });
+      v = App.el('#view');
+      if (v) v.scrollTop = y;
+    }
+    var b = App.el('[data-more]', view);
+    if (b) b.addEventListener('click', function () { showThisMany(shown + UI.PAGE, false); });
+    var a = App.el('[data-more-all]', view);
+    if (a) a.addEventListener('click', function () { showThisMany(Math.max(shown, App.n(this.getAttribute('data-more-all'))), true); });
   };
 
   /* ---------------- empty state ---------------- */
@@ -4053,7 +4490,7 @@ Minimum version required to store current data is: `+i+`.
 
   UI.toggleTheme = function () {
     App.db.settings.theme = App.db.settings.theme === 'dark' ? 'light' : 'dark';
-    App.store.touch();
+    App.store.touch('settings');
     UI.applyTheme();
   };
 
@@ -4494,8 +4931,17 @@ Minimum version required to store current data is: `+i+`.
       rx: INV.rxOf(s),
       outstanding: c ? M.customerStats(c.id).outstanding : 0,
       mobile: s.customerMobile || (c && c.mobile) || '',
+      address: INV.addressOf(s, c),
       title: s.status === 'cancelled' ? 'Cancelled invoice' : (App.n(s.taxAmount) ? 'Tax invoice' : 'Invoice')
     };
+  };
+
+  /* The address printed on a bill: the one kept with the bill itself, so a customer who moves
+     does not rewrite old bills. Bills made before bills carried an address fall back to the
+     customer's saved one. An address cleared on purpose stays cleared. */
+  INV.addressOf = function (s, c) {
+    if (s && s.customerAddress !== undefined && s.customerAddress !== null) return String(s.customerAddress).trim();
+    return (c && c.address) || '';
   };
 
   /* 'Cash', or 'Cash + UPI' when the bill was paid in parts */
@@ -4520,6 +4966,34 @@ Minimum version required to store current data is: `+i+`.
     if (d.length === 10) return cc + d;
     if (d.length >= 11 && d.length <= 15) return d;
     return '';
+  };
+
+  /* The shop's name, faint and slanted, repeating behind the bill — like printed stationery.
+     It is a background picture, so nothing on the bill moves or shifts because of it. */
+  INV.watermarkStyle = function (set) {
+    var mark = (set && set.billMark) || 'name';
+    if (mark === 'none') return '';
+    if (mark === 'logo') {
+      var src = App.safeImg(set && set.logo);
+      if (!src) return '';
+      var box = 560;
+      var lsvg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ' +
+        'width="' + box + '" height="' + box + '" viewBox="0 0 ' + box + ' ' + box + '">' +
+        '<image href="' + App.esc(src) + '" xlink:href="' + App.esc(src) + '" x="60" y="60" width="440" height="440" ' +
+        'preserveAspectRatio="xMidYMid meet" opacity="0.07"/></svg>';
+      return ' style="background-image:url(&quot;data:image/svg+xml,' + encodeURIComponent(lsvg).replace(/'/g, '%27') +
+        '&quot;);background-repeat:repeat;background-position:center"';
+    }
+    var name = String((set && set.shopName) || '').trim();
+    if (!name) return '';
+    var w = Math.max(360, Math.min(900, name.length * 23 + 90)), h = 250;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+      '<text x="' + (w / 2) + '" y="' + (h / 2) + '" text-anchor="middle" dominant-baseline="middle" ' +
+      'transform="rotate(-24 ' + (w / 2) + ' ' + (h / 2) + ')" ' +
+      'font-family="Helvetica,Arial,sans-serif" font-size="38" font-weight="700" letter-spacing="2" ' +
+      'fill="#1E3A5F" fill-opacity="0.055">' + App.esc(name.toUpperCase()) + '</text></svg>';
+    return ' style="background-image:url(&quot;data:image/svg+xml,' + encodeURIComponent(svg).replace(/'/g, '%27') +
+      '&quot;);background-repeat:repeat;background-position:center"';
   };
 
   /* ---------------- the thank-you message ---------------- */
@@ -4557,9 +5031,11 @@ Minimum version required to store current data is: `+i+`.
     var contact = [set.phone, set.altPhone].filter(Boolean).join(', ');
     var cell = function (k, v) { return '<div><div class="k">' + k + '</div><div class="v">' + v + '</div></div>'; };
 
-    var h = '<article class="iv' + (set.invoicePattern === false ? '' : ' iv-pattern') + '" aria-label="Invoice ' + e(s.invoiceNo) + '">' +
+    var h = '<article class="iv' + (set.invoicePattern === false ? '' : ' iv-pattern') + '"' + INV.watermarkStyle(set) +
+      ' aria-label="Invoice ' + e(s.invoiceNo) + '">' +
       '<header class="iv-top"><div class="iv-shop">' +
-        '<div class="iv-logo' + (logo ? ' has-img' : '') + '">' + (logo ? '<img src="' + e(logo) + '" alt="">' : App.brandMark(30)) + '</div>' +
+        '<div class="iv-logo' + (logo ? ' has-img lg-' + (['clear', 'white', 'soft'].indexOf(set.billLogoBg) >= 0 ? set.billLogoBg : 'clear') : '') + '">' +
+          (logo ? '<img src="' + e(logo) + '" alt="">' : App.brandMark(30)) + '</div>' +
         '<div><div class="iv-shopname">' + e(set.shopName) + '</div>' +
           (set.address ? '<div class="iv-shopmeta">' + e(set.address).replace(/\n/g, '<br>') + '</div>' : '') +
           ((contact || set.gstin) ? '<div class="iv-shopmeta">' + (contact ? App.icon('phone', 13) + '<span>' + e(contact) + '</span>' : '') +
@@ -4576,7 +5052,7 @@ Minimum version required to store current data is: `+i+`.
     h += '<div class="iv-parties">' +
       '<div class="iv-card"><div class="iv-lbl">Billed to</div><div class="iv-name">' + e(d.name) + '</div>' +
         '<div class="iv-meta">' + [d.mobile ? e(d.mobile) : '', d.c && d.c.code ? 'Customer ID ' + e(d.c.code) : ''].filter(Boolean).join(' · ') + '</div>' +
-        (d.c && d.c.address ? '<div class="iv-meta">' + e(d.c.address) + '</div>' : '') + '</div>' +
+        (d.address ? '<div class="iv-meta">' + e(d.address).replace(/\n/g, '<br>') + '</div>' : '') + '</div>' +
       '<div class="iv-card iv-amount"><div class="iv-lbl">Invoice total</div><div class="iv-big">' + App.money(s.total) + '</div>' +
         '<div class="iv-meta ' + (s.status === 'cancelled' ? '' : d.due > 0.5 ? 'is-due' : 'is-paid') + '">' +
           (s.status === 'cancelled' ? 'This invoice was cancelled'
@@ -4871,6 +5347,36 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       ctx.restore();
     }
 
+    /* the shop's logo, large and faint in the middle of the page */
+    var markKind = set.billMark || 'name';
+    if (markKind === 'logo' && logoImage()) {
+      var mi = logoImage(), mk = Math.min(620 / mi.naturalWidth, 620 / mi.naturalHeight);
+      ctx.save();
+      ctx.globalAlpha = 0.07;
+      ctx.drawImage(mi, (W - mi.naturalWidth * mk) / 2, (H - mi.naturalHeight * mk) / 2,
+        mi.naturalWidth * mk, mi.naturalHeight * mk);
+      ctx.restore();
+    }
+
+    /* the shop's name, faint and slanted across the page */
+    if (markKind === 'name' && String(set.shopName || '').trim()) {
+      var wm = String(set.shopName).trim().toUpperCase();
+      ctx.save();
+      ctx.globalAlpha = 0.055;
+      ctx.fillStyle = C.navy;
+      font(ctx, '700', 58);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var stepX = ctx.measureText(wm).width + 150, reach = Math.max(W, H) * 1.3;
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(-24 * Math.PI / 180);
+      for (var wy = -reach; wy < reach; wy += 230) {
+        for (var wx = -reach; wx < reach; wx += stepX) ctx.fillText(wm, wx, wy);
+      }
+      ctx.restore();
+      ctx.textBaseline = 'alphabetic';
+    }
+
     /* ---- header band ---- */
     var TX = P + 140, TW = 500;
     font(ctx, '800', 46);
@@ -4893,13 +5399,21 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     ctx.restore();
 
     var img = logoImage();
-    rr(ctx, P, 56, 112, 112, 28);
     if (img) {
-      ctx.fillStyle = '#FFFFFF'; ctx.fill();
-      var lk = Math.min(92 / img.naturalWidth, 92 / img.naturalHeight);
+      /* the shop's own logo on the header, with whatever backing the shop chose */
+      var bg = set.billLogoBg || 'clear';
+      if (bg === 'white' || bg === 'soft') {
+        rr(ctx, P, 56, 112, 112, bg === 'white' ? 18 : 28);
+        ctx.fillStyle = bg === 'white' ? '#FFFFFF' : 'rgba(255,255,255,0.16)';
+        ctx.fill();
+      }
+      var pad = (bg === 'clear') ? 0 : 10;
+      var room = 112 - pad * 2;
+      var lk = Math.min(room / img.naturalWidth, room / img.naturalHeight);
       var iw = img.naturalWidth * lk, ih = img.naturalHeight * lk;
       ctx.drawImage(img, P + (112 - iw) / 2, 56 + (112 - ih) / 2, iw, ih);
     } else {
+      rr(ctx, P, 56, 112, 112, 28);
       ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fill();
       drawBrand(ctx, P + 56, 112, 86, '#FFFFFF');
     }
@@ -4945,7 +5459,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var lw = Math.round((IW - 24) * 0.56), rw = IW - 24 - lw, rx0 = P + lw + 24;
     font(ctx, '400', 23);
     var who = [d.mobile, d.c && d.c.code ? 'Customer ID ' + d.c.code : ''].filter(Boolean).join('  ·  ');
-    var addr = d.c && d.c.address ? wrap(ctx, d.c.address, lw - 56).slice(0, 2) : [];
+    var addr = d.address ? wrap(ctx, d.address.replace(/\n/g, ', '), lw - 56).slice(0, 2) : [];
     var cardH = Math.max(180, 92 + (who ? 36 : 0) + addr.length * 32 + 30);
 
     rr(ctx, P + 1, y + 1, lw - 2, cardH - 2, 22); ctx.lineWidth = 2; ctx.strokeStyle = C.line; ctx.stroke();
@@ -5135,12 +5649,16 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var out = document.createElement('canvas');
     out.width = Math.round(W * k); out.height = Math.round(Math.min(y, H) * k);
     out.getContext('2d').drawImage(cv, 0, 0);
+    App.freeCanvas(cv);              /* the full-page sheet is finished with — give the memory back now */
     return out;
   };
 
   INV.toPNG = function (saleId) {
     var cv = INV.toCanvas(saleId, 1);
-    return cv ? cv.toDataURL('image/png') : '';
+    if (!cv) return '';
+    var url = cv.toDataURL('image/png');
+    App.freeCanvas(cv);
+    return url;
   };
 
   /* ---------------- files in the browser ---------------- */
@@ -5243,7 +5761,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     function done(number) {
       d.s.whatsappOpenedAt = App.nowISO();
       d.s.whatsappTo = number;
-      App.store.touch();
+      App.store.touch('sales', d.s.date);
       if (onDone) onDone();
     }
   };
@@ -5394,7 +5912,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
             if (!number) return UI.markError(a.el, 'wa', 'Enter a valid 10-digit mobile number');
             var typed = String(f.wa).trim();
             if (canSave && f.savec) M.customerUpdate(d.c.id, { mobile: typed });
-            if (!d.s.customerMobile) { d.s.customerMobile = typed; App.store.touch(); }
+            if (!d.s.customerMobile) { d.s.customerMobile = typed; App.store.touch('sales', d.s.date); }
             a.close();
             cb(number);
           } }
@@ -5522,7 +6040,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     if (!d) return null;
     var cv = App.Invoice.toCanvas(saleId, 2);
     var jpeg = App.base64ToBytes(cv.toDataURL('image/jpeg', 0.9).split(',')[1]);
-    return App.pdfFromJpeg(jpeg, cv.width, cv.height, d.title + ' ' + d.s.invoiceNo);
+    var w = cv.width, h = cv.height;
+    App.freeCanvas(cv);              /* a bill drawn at double size is tens of megabytes: release it */
+    return App.pdfFromJpeg(jpeg, w, h, d.title + ' ' + d.s.invoiceNo);
   };
 })();
 
@@ -5634,7 +6154,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     html += '<div class="grid g2">';
 
     /* recent sales */
-    var recent = M.sales().slice().sort(function (a, b) { return b.createdAt > a.createdAt ? 1 : -1; }).slice(0, 8);
+    var recent = M.sales().filter(function (s) { return !s.orderbook; }).sort(function (a, b) { return b.createdAt > a.createdAt ? 1 : -1; }).slice(0, 8);
     html += '<div class="card"><div class="card-head"><h3>Recent Sales</h3>' +
       '<div class="actions"><button class="btn btn-sm" data-go="/sales">View all</button></div></div>';
     if (!recent.length) html += UI.empty('receipt', 'No bills yet', 'Tap + New Bill to create your first bill');
@@ -5642,7 +6162,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       html += '<div class="tablewrap"><table class="tbl"><tbody>' + recent.map(function (s2) {
         var paid = M.salePaid(s2.id), due = App.round2(s2.total - paid);
         return '<tr class="clickable" data-go="/sale/' + s2.id + '">' +
-          '<td><div class="b">' + App.esc(s2.customerName || 'Walk-in') + '</div>' +
+          '<td><div class="b">' + App.esc(App.listName(s2.customerName) || 'Walk-in') + '</div>' +
           '<div class="tiny dim mono">' + App.esc(s2.invoiceNo) + ' · ' + App.fmtDate(s2.date) + '</div></td>' +
           '<td class="num right"><div class="b">' + App.money(s2.total) + '</div>' +
           (s2.status === 'cancelled' ? '<span class="pill p-mute">Cancelled</span>' :
@@ -5661,7 +6181,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       html += '<div class="tablewrap"><table class="tbl"><tbody>' + rp.map(function (p) {
         var c = p.customerId ? M.find('customers', p.customerId) : null;
         return '<tr' + (c ? ' class="clickable" data-go="/customer/' + c.id + '"' : '') + '>' +
-          '<td><div class="b">' + App.esc(c ? c.name : 'Walk-in') + '</div>' +
+          '<td><div class="b">' + App.esc(c ? App.listName(c.name) : 'Walk-in') + '</div>' +
           '<div class="tiny dim">' + App.fmtDate(p.date) + ' · ' + App.esc(p.method) + '</div></td>' +
           '<td class="num right"><span class="b pos">' + App.money(p.amount) + '</span></td></tr>';
       }).join('') + '</tbody></table></div>';
@@ -5763,13 +6283,14 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         '<th>Customer</th><th>Mobile</th><th class="right">Invoices</th>' +
         '<th class="right">Total Purchased</th><th class="right">Due</th><th>Last Visit</th><th></th>' +
         '</tr></thead><tbody>';
+      var showFully = !!q;                       /* a name was looked up, so show it in full */
       list.slice(0, SHOW).forEach(function (c) {
         var st = M.customerStats(c.id);
         html += '<tr class="clickable" data-id="' + c.id + '">' +
           '<td><div class="flex aic gap12"><div class="avatar">' + App.esc(App.initials(c.name)) + '</div>' +
-          '<div><div class="b">' + App.esc(c.name) + '</div><div class="tiny dim mono">' + App.esc(c.code) +
+          '<div><div class="b">' + App.esc(App.listName(c.name, showFully)) + '</div><div class="tiny dim mono">' + App.esc(c.code) +
           (st.rxCount ? '</div><div class="tiny dim mono">' + App.icon('eye', 13) + ' ' + st.rxCount + ' Rx' : '') + '</div></div></div></td>' +
-          '<td class="mono">' + App.esc(c.mobile || '—') + '</td>' +
+          '<td class="mono">' + App.esc(App.listMobile(c.mobile, showFully) || '—') + '</td>' +
           '<td class="num right">' + st.invoices + '</td>' +
           '<td class="num right">' + App.money(st.billed) + '</td>' +
           '<td class="num right">' + (st.outstanding > 0.5
@@ -6734,9 +7255,14 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var rxOn = {};                                 /* customer|date -> prescription, to print on that day's bill */
     App.db.prescriptions.forEach(function (p) { if (!p.deletedAt) rxOn[p.customerId + '|' + p.date] = p; });
 
-    return new Promise(function (resolve) {
+    return new Promise(function (resolve, reject) {
       var i = 0, res = { made: 0, updated: 0, rx: 0, sales: 0, salesValue: 0 };
+      M.bulk(true);          /* the lookup maps grow with the import instead of being rebuilt per record */
       function step() {
+        try { work(); }
+        catch (err) { M.bulk(false); App.store.touch(); reject(err); }   /* never leave bulk on */
+      }
+      function work() {
         var end = Math.min(plan.groups.length, i + 250);
         for (; i < end; i++) {
           var g = plan.groups[i], recs = g.recs, first = recs[0];
@@ -6797,8 +7323,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         if (withSales) counters.registerBill = billNo;
         App.store.touch();
         if (onProgress) onProgress(i, plan.groups.length);
-        if (i < plan.groups.length) setTimeout(step, 0);
-        else resolve(res);
+        if (i < plan.groups.length) { setTimeout(step, 0); return; }
+        M.bulk(false);
+        resolve(res);
       }
       step();
     });
@@ -6936,7 +7463,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       var f = input.files && input.files[0];
       if (!f) return;
       status.className = 'sm';
-      status.textContent = 'Reading ' + f.name + '…';
+      status.textContent = 'Reading ' + f.name + ' (' + App.bytes(f.size) + ')…';
+      var namedExcel = /\.xlsx?$/i.test(f.name);
       var fr = new FileReader();
       fr.onerror = function () { status.className = 'sm neg b'; status.textContent = 'Could not read this file.'; };
       function fail(msg) { status.className = 'sm neg b'; status.textContent = msg; }
@@ -6956,6 +7484,11 @@ var prod = i.productId ? M.find('products', i.productId) : null;
             fail((e && e.message) || 'This Excel file could not be opened. Save it as CSV and try again.');
           });
           return;
+        }
+        if (namedExcel) {
+          return fail('This file is named ' + (/\.xlsx$/i.test(f.name) ? '.xlsx' : '.xls') +
+            ' but it is not saved in Excel\u2019s own format, so it cannot be opened. ' +
+            'Open it in WPS or Excel and choose Save as \u2192 CSV, then pick that file.');
         }
         var text;
         try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
@@ -7074,6 +7607,13 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           (res.sales ? ' and ' + res.sales.toLocaleString('en-IN') + ' bills' : ''), 'ok', 7000);
         UI.go('/customers');
       });
+    }).catch(function (e) {
+      /* the import stopped part way: keep what arrived, say so plainly, and let them try again */
+      buttons.forEach(function (b) { b.disabled = false; });
+      prog.className = 'sm b mt12 neg';
+      prog.textContent = 'The import stopped part way (' + (e && e.message ? e.message : e) + '). ' +
+        'What arrived so far is kept. Run the import again — the app joins rows it already has instead of making copies.';
+      App.store.saveNow();
     });
   }
 
@@ -7984,7 +8524,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
             else diff = App.round2(qty - App.n(p.stock));
             if (diff === 0) { a.close(); return; }
             M.stockMove(p.id, diff, 'adjust', 'manual', '', d.note || (d.mode === 'set' ? 'Physical count' : 'Manual adjustment'));
-            App.store.touch(); App.store.saveNow();
+            App.store.saveNow();
             a.close();
             App.toast('Stock is now ' + App.n(p.stock), 'ok');
             UI.render();
@@ -8100,7 +8640,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
   var UI = App.UI, M = App.M;
 
   /* ================= SALES LIST ================= */
-  UI.route('sales', function (view, r) {
+  function listScreen(view, r, isOrder) {
+    var base = isOrder ? '/orderbook' : '/sales';
+    var noun = isOrder ? 'orders' : 'invoices';
     var d = r.query.d || '';
     var from = r.query.from || d || '';
     var to = r.query.to || d || '';
@@ -8109,6 +8651,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
     var showCancelled = r.query.cancelled === '1';
     var list = M.sales().slice();
+    list = list.filter(function (s) { return isOrder ? !!s.orderbook : !s.orderbook; });
     /* a cancelled bill is kept in the records but stays out of the list unless it is asked for */
     var cancelledCount = list.filter(function (s) { return s.status === 'cancelled'; }).length;
     list = list.filter(function (s) { return showCancelled ? s.status === 'cancelled' : s.status !== 'cancelled'; });
@@ -8126,7 +8669,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
     var html =
       '<div class="view-head">' +
-        '<div><h1>Sales / Invoices</h1><div class="sub">' + active.length + ' invoices · ' + App.money(total) + ' · Due ' + App.money(total - paid) + '</div></div>' +
+        '<div><h1>' + (isOrder ? 'Order Forum' : 'Sales / Invoices') + '</h1><div class="sub">' + active.length + ' ' + noun + ' · ' + App.money(total) + ' · Due ' + App.money(total - paid) + '</div></div>' +
         '<div class="actions">' +
           '<button class="btn" id="sexport">' + App.icon('download', 18) + ' CSV</button>' +
           '<button class="btn btn-primary" data-go="/sale/new">+ New Bill</button>' +
@@ -8150,8 +8693,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       '</div></div>';
 
     html += '<div class="card">';
-    if (!list.length) html += UI.empty('receipt', showCancelled ? 'No cancelled bills' : 'No invoices found',
-      showCancelled ? 'Nothing was cancelled in this period' : 'Tap the button above to create a new bill');
+    if (!list.length) html += UI.empty('receipt', showCancelled ? 'No cancelled bills' : (isOrder ? 'No orders yet' : 'No invoices found'),
+      showCancelled ? 'Nothing was cancelled in this period' : (isOrder ? 'Tick "Save to Order Forum" on a new bill to add one here' : 'Tap the button above to create a new bill'));
     else {
       html += '<div class="tablewrap"><table class="tbl"><thead><tr>' +
         '<th>Invoice</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th>' +
@@ -8161,8 +8704,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         html += '<tr class="clickable" data-id="' + s.id + '">' +
           '<td class="mono b">' + App.esc(s.invoiceNo) + (s.status === 'cancelled' ? '<br><span class="pill p-mute">Cancelled</span>' : '') + '</td>' +
           '<td class="sm">' + App.fmtDate(s.date) + '</td>' +
-          '<td><div class="b">' + App.esc(s.customerName || 'Walk-in') + '</div>' +
-          (s.customerMobile ? '<div class="tiny dim mono">' + App.esc(s.customerMobile) + '</div>' : '') + '</td>' +
+          '<td><div class="b">' + App.esc(App.listName(s.customerName, !!q) || 'Walk-in') + '</div>' +
+          (s.customerMobile ? '<div class="tiny dim mono">' + App.esc(App.listMobile(s.customerMobile, !!q)) + '</div>' : '') + '</td>' +
           '<td class="sm dim">' + s.items.length + '</td>' +
           '<td><span class="pill p-brand">' + App.esc(s.paymentMethod) + '</span></td>' +
           '<td class="num right b">' + App.money(s.total) + '</td>' +
@@ -8186,12 +8729,12 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       for (var k in o) n[k] = o[k];
       var p = [];
       for (var k2 in n) if (n[k2]) p.push(k2 + '=' + encodeURIComponent(n[k2]));
-      UI.go('/sales' + (p.length ? '?' + p.join('&') : ''));
+      UI.go(base + (p.length ? '?' + p.join('&') : ''));
     }
     App.el('#sq', view).addEventListener('input', App.debounce(function () { apply({}); }, 350));
     App.el('#sfrom', view).addEventListener('change', function () { apply({}); });
     App.el('#sto', view).addEventListener('change', function () { apply({}); });
-    App.el('#sclear', view).addEventListener('click', function () { UI.go('/sales'); });
+    App.el('#sclear', view).addEventListener('click', function () { UI.go(base); });
     App.on(view, 'click', '[data-cancelled]', function () {
       apply({ cancelled: this.getAttribute('data-cancelled') === '1' ? '1' : '' });
     });
@@ -8200,7 +8743,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       if (k === 'today') apply({ from: t, to: t });
       else if (k === 'week') apply({ from: App.addDays(t, -6), to: t });
       else if (k === 'month') apply({ from: t.slice(0, 8) + '01', to: t });
-      else UI.go('/sales');
+      else UI.go(base);
     });
     App.on(view, 'click', 'tr[data-id]', function (e) {
       if (e.target.closest('[data-print]')) return;
@@ -8214,10 +8757,12 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         rows.push([s.invoiceNo, s.date, s.customerName, s.customerMobile, s.items.map(function (i) { return i.name + ' x' + i.qty; }).join(' | '),
           s.subtotal, s.totalDiscount, s.taxAmount, s.total, p, App.round2(s.total - p), s.paymentMethod, s.status, s.notes]);
       });
-      App.download('sales_' + App.today() + '.csv', App.toCSV(rows), 'text/csv');
+      App.download((isOrder ? 'orderbook_' : 'sales_') + App.today() + '.csv', App.toCSV(rows), 'text/csv');
       App.toast('CSV downloaded', 'ok');
     });
-  });
+  }
+  UI.route('sales', function (view, r) { listScreen(view, r, false); });
+  UI.route('orderbook', function (view, r) { listScreen(view, r, true); });
 
   /* ================= NEW SALE / INVOICE DETAIL ================= */
   var S = null;   /* draft state */
@@ -8235,6 +8780,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       customer: c,
       customerName: c ? c.name : '',
       customerMobile: c ? c.mobile : '',
+      customerAddress: c ? (c.address || '') : '',
+      saveWho: false,        /* also write the name, mobile and address back to the customer */
       prescriptionId: '',
       rxChoice: 'auto',     /* 'auto' = latest saved one, a record id, 'draft' = typed for this bill, 'none' */
       rxDraft: null,
@@ -8311,6 +8858,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     d.date = s.date;
     d.customerName = s.customerName || '';
     d.customerMobile = s.customerMobile || '';
+    d.customerAddress = App.Invoice.addressOf(s, s.customerId ? M.find('customers', s.customerId) : null);
     d.items = (s.items || []).map(function (l) {
       return { productId: l.productId || '', sku: l.sku || '', name: l.name, qty: App.n(l.qty),
         rate: App.n(l.rate), costPrice: App.n(l.costPrice), discount: App.n(l.discount),
@@ -8324,6 +8872,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     d.taxPercent = App.n(s.taxPercent);
     d.roundOff = s.roundOff !== false;
     d.notes = s.notes || '';
+    d.orderbook = !!s.orderbook;
     if (s.prescriptionId) { d.rxChoice = s.prescriptionId; }
     else if (s.prescription) { d.rxChoice = 'draft'; d.rxDraft = s.prescription; }
     else { d.rxChoice = 'none'; }
@@ -8441,6 +8990,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     S.customer = c || null;
     S.customerName = c ? c.name : '';
     S.customerMobile = c ? c.mobile : '';
+    S.customerAddress = c ? (c.address || '') : '';   /* the bill prints the address they have today */
+    S.saveWho = false;
     S.prescriptionId = '';
     S.rxChoice = 'auto';
     S.custQuery = '';
@@ -8472,9 +9023,13 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         '<div class="walkin">' + App.icon('walk', 18) + '<span>Walk-in customer</span>' +
           '<button type="button" class="link-btn" id="ncnew">' + App.icon('plus', 16) + '<span>New customer</span></button></div>';
     }
-    /* the name printed on this bill: fix a spelling here without touching the customer's record */
-    if (S.editId || !c) {
-      h += '<div class="bill-who">' +
+    /* what is printed on this bill: correct a spelling, a mobile or an address here.
+       On an old bill or a walk-in the fields are open; for a known customer they are folded away. */
+    var whoOpen = !!(S.editId || !c);
+    h += (whoOpen ? '' :
+        '<details class="more who-more"><summary>' + App.icon('user', 17) +
+          '<span>Name, mobile &amp; address on this bill</span>' + App.icon('chevronD', 18, 'chev') + '</summary>') +
+      '<div class="bill-who">' +
         '<div class="row" style="grid-template-columns:1fr 1fr">' +
           '<div class="f"><label for="nsbname">Name on this bill</label>' +
             '<input type="text" id="nsbname" autocomplete="off" value="' + App.esc(S.customerName || '') + '" ' +
@@ -8483,17 +9038,24 @@ var prod = i.productId ? M.find('products', i.productId) : null;
             '<input type="tel" id="nsbmob" inputmode="numeric" autocomplete="off" value="' + App.esc(S.customerMobile || '') + '" ' +
               'placeholder="' + App.esc(c ? (c.mobile || 'none') : 'none') + '"></div>' +
         '</div>' +
-        '<div class="help">' + (c ? 'Printed on this bill only. To change it everywhere, open the customer.'
-                                  : 'Optional — leave empty for "Walk-in customer".') + '</div>' +
-      '</div>';
-    }
+        '<div class="f"><label for="nsbaddr">Address on this bill</label>' +
+          '<textarea id="nsbaddr" rows="2" placeholder="' + App.esc(c && c.address ? App.oneLine(c.address) : 'Not printed') + '">' +
+            App.esc(S.customerAddress || '') + '</textarea></div>' +
+        (c ? '<label class="switch"><input type="checkbox" id="nsbsave"' + (S.saveWho ? ' checked' : '') + '>' +
+             '<span class="track"></span><span class="lb">Also save these to ' + App.esc(c.name) + '\u2019s record</span></label>' : '') +
+        '<div class="help">' + (c ? 'Printed on this bill. Tick the box above to correct the customer everywhere.'
+                                  : 'Optional — leave the name empty for "Walk-in customer".') + '</div>' +
+      '</div>' + (whoOpen ? '' : '</details>');
 
     h += '</div>' + rxBlock(c);
     el.innerHTML = h;
 
     var bn = App.el('#nsbname', el), bm = App.el('#nsbmob', el);
+    var ba = App.el('#nsbaddr', el), bs = App.el('#nsbsave', el);
     if (bn) bn.addEventListener('input', function () { S.customerName = this.value; });
     if (bm) bm.addEventListener('input', function () { S.customerMobile = this.value; });
+    if (ba) ba.addEventListener('input', function () { S.customerAddress = this.value; });
+    if (bs) bs.addEventListener('change', function () { S.saveWho = this.checked; });
 
     var chg = App.el('#ncchange', el);
     if (chg) chg.addEventListener('click', function () {
@@ -8852,11 +9414,22 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var bdOpen = S.billDiscOpen || App.n(S.billDiscount) > 0;
     var extras = [];
     if (S.taxEnabled) extras.push('GST ' + App.n(S.taxPercent) + '%');
-    if (S.date !== App.today()) extras.push(App.fmtDate(S.date));
     if (!S.roundOff) extras.push('No round off');
     if (S.notes) extras.push('Note');
 
+    var todayIs = App.today();
     box.innerHTML =
+      '<div class="pos-sec date-sec"><span class="pos-label">Bill date</span>' +
+        (S.date === todayIs ? '' :
+          '<span class="date-tag' + (S.date > todayIs ? ' ahead' : '') + '">' +
+            (S.date > todayIs ? 'Future date' : 'Back-dated') + '</span>') +
+      '</div>' +
+      '<div class="bill-date">' +
+        '<input type="date" id="nsdate" value="' + S.date + '" aria-label="Date printed on this bill">' +
+        '<button type="button" class="chip" data-dq="today">Today</button>' +
+        '<button type="button" class="chip" data-dq="yest">Yesterday</button>' +
+      '</div>' +
+      '<label class="switch order-sw" style="margin:2px 0 10px"><input type="checkbox" id="nsorder"' + (S.orderbook ? ' checked' : '') + '><span class="track"></span><span class="lb">Save to Order Forum (keep out of Sales)</span></label>' +
       (bdOpen
         ? '<div class="pay-disc"><label for="nsbd">Discount on the whole bill</label><div class="pay-disc-row">' +
             '<input type="number" id="nsbd" value="' + App.n(S.billDiscount) + '" inputmode="decimal" step="0.01" min="0">' +
@@ -8886,10 +9459,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       '<div class="banner warn mt8" id="nswarn" hidden>' + App.icon('alert', 20) +
         '<div class="tx">Choose a customer to give credit<small>A walk-in bill must be paid in full.</small></div></div>' +
       '<details class="more" id="nsmore"' + (S.moreOpen ? ' open' : '') + '><summary>' + App.icon('sliders', 18) +
-        '<span>More options</span><span class="more-hint">' + App.esc(extras.length ? extras.join(' · ') : 'Date, GST, note') + '</span>' +
+        '<span>More options</span><span class="more-hint">' + App.esc(extras.length ? extras.join(' · ') : 'GST, note, bill number') + '</span>' +
         App.icon('chevronD', 18, 'chev') + '</summary>' +
         '<div class="more-body frm">' +
-          '<div class="f"><label for="nsdate">Bill date</label><input type="date" id="nsdate" value="' + S.date + '"></div>' +
           (S.editId ? '<div class="f"><label for="nsno">Bill number</label>' +
             '<input type="text" id="nsno" autocomplete="off" value="' + App.esc(S.invoiceNo || '') + '">' +
             '<div class="help">Must not be the same as another bill.</div></div>' : '') +
@@ -8913,6 +9485,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         x.setAttribute('aria-checked', on);
       });
     }
+    var ordChk = App.el('#nsorder', box);
+    if (ordChk) ordChk.addEventListener('change', function () { S.orderbook = this.checked; });
     var bdo = App.el('#nsbdopen', box);
     if (bdo) bdo.addEventListener('click', function () {
       S.billDiscOpen = true;
@@ -9009,6 +9583,14 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var noBox = App.el('#nsno', box);
     if (noBox) noBox.addEventListener('input', function () { S.invoiceNo = this.value; });
     App.el('#nsdate', box).addEventListener('change', function () { S.date = this.value || App.today(); drawPayBox(); refresh(); });
+    App.els('[data-dq]', box).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var d = new Date();
+        if (this.getAttribute('data-dq') === 'yest') d.setDate(d.getDate() - 1);
+        S.date = App.dstr(d);
+        drawPayBox(); refresh();
+      });
+    });
     App.el('#nstax', box).addEventListener('change', function () { S.taxEnabled = this.checked; S.paidTouched = false; drawPayBox(); refresh(); });
     var tp = App.el('#nstaxp', box);
     if (tp) tp.addEventListener('change', function () { S.taxPercent = Math.max(0, App.n(this.value)); S.paidTouched = false; drawPayBox(); refresh(); });
@@ -9016,6 +9598,16 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     if (ti) ti.addEventListener('change', function () { S.taxInclusive = this.value === '1'; S.paidTouched = false; drawPayBox(); refresh(); });
     App.el('#nsround', box).addEventListener('change', function () { S.roundOff = this.checked; S.paidTouched = false; drawPayBox(); refresh(); });
     App.el('#nsnotes', box).addEventListener('input', function () { S.notes = this.value; });
+  }
+
+  /* the box under the bill's name and address: correct the customer everywhere, not just here */
+  function saveWhoToCustomer() {
+    if (!S || !S.saveWho || !S.customer) return;
+    var d = { address: String(S.customerAddress || '').trim() };
+    var nm = String(S.customerName || '').trim(), mb = String(S.customerMobile || '').trim();
+    if (nm) d.name = nm;
+    if (mb) d.mobile = mb;
+    M.customerUpdate(S.customer.id, d);
   }
 
   /* on an edit: the money taken with the bill, which can be corrected line by line */
@@ -9149,6 +9741,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         customerId: S.customer ? S.customer.id : '',
         customerName: billName(),
         customerMobile: String(S.customerMobile || '').trim() || (S.customer ? S.customer.mobile : ''),
+        customerAddress: String(S.customerAddress || '').trim(),
         prescriptionId: (function () { var x = chosenRx(); return x && x.id && S.customer ? x.id : ''; })(),
         prescription: chosenRx(),
         items: S.items,
@@ -9159,10 +9752,12 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         payments: S.split,
         paidNow: S.paidNow,
         notes: S.notes,
+        orderbook: !!S.orderbook,
         allowNegativeStock: allowNeg
       };
       try {
         var sale = M.saleCreate(d);
+        saveWhoToCustomer();
         S = null;
         UI.go('/sale/' + sale.id + '?new=1');
         if (withPrint) setTimeout(function () { App.printInvoice(sale.id); }, 400);
@@ -9197,6 +9792,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       customerId: S.customer ? S.customer.id : '',
       customerName: billName(),
       customerMobile: String(S.customerMobile || '').trim(),
+      customerAddress: String(S.customerAddress || '').trim(),
       prescriptionId: (function () { var x = chosenRx(); return x && x.id && S.customer ? x.id : ''; })(),
       prescription: chosenRx(),
       items: S.items,
@@ -9205,6 +9801,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       taxEnabled: S.taxEnabled, taxInclusive: S.taxInclusive, taxPercent: S.taxPercent,
       roundOff: S.roundOff,
       notes: S.notes,
+      orderbook: S.orderbook,
       reason: reason,
       allowNegativeStock: allowNeg
     };
@@ -9219,6 +9816,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       invoiceNo: String(S.invoiceNo || '').trim(), received: paidAllTotal(),
       customerMobile: String(S.customerMobile || '').trim(),
       customerName: billName(),
+      customerAddress: String(S.customerAddress || '').trim(),
       billDiscountRaw: App.n(S.billDiscount), billDiscountType: S.billDiscountType,
       taxEnabled: S.taxEnabled, taxPercent: App.n(S.taxPercent), notes: S.notes,
       prescription: rxNow ? { code: rxNow.code || '', date: rxNow.date || '' } : null
@@ -9252,6 +9850,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var id = S.editId;
     try {
       M.saleUpdate(id, editData(reason, allowNeg));
+      saveWhoToCustomer();
       S = null;
       UI.go('/sale/' + id + '?edited=1');
       if (withPrint) setTimeout(function () { App.printInvoice(id); }, 400);
@@ -9514,7 +10113,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           var s = p.saleId ? M.find('sales', p.saleId) : null;
           return '<tr>' +
             '<td class="sm">' + App.fmtDate(p.date) + '</td>' +
-            '<td>' + (c ? '<a href="#/customer/' + c.id + '" class="b">' + App.esc(c.name) + '</a>' : '<span class="dim">Walk-in</span>') + '</td>' +
+            '<td>' + (c ? '<a href="#/customer/' + c.id + '" class="b">' + App.esc(App.listName(c.name)) + '</a>' : '<span class="dim">Walk-in</span>') + '</td>' +
             '<td class="mono sm">' + (s ? '<a href="#/sale/' + s.id + '">' + App.esc(s.invoiceNo) + '</a>' : '—') + '</td>' +
             '<td><span class="pill p-brand">' + App.esc(p.method) + '</span></td>' +
             '<td class="sm dim">' + App.esc(p.note || '—') + '</td>' +
@@ -10230,7 +10829,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
       case 'monthly': {
         var months = {};
-        M.sales().filter(function (s) { return s.status !== 'cancelled' && s.date >= from && s.date <= to; })
+        M.sales().filter(function (s) { return s.status !== 'cancelled' && !s.orderbook && s.date >= from && s.date <= to; })
           .forEach(function (s) { months[App.monthOf(s.date)] = 1; });
         M.expenses().filter(function (e) { return e.date >= from && e.date <= to; })
           .forEach(function (e) { months[App.monthOf(e.date)] = 1; });
@@ -10257,7 +10856,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
       case 'yearly': {
         var years = {};
-        M.sales().forEach(function (s) { if (s.status !== 'cancelled') years[App.yearOf(s.date)] = 1; });
+        M.sales().forEach(function (s) { if (s.status !== 'cancelled' && !s.orderbook) years[App.yearOf(s.date)] = 1; });
         M.expenses().forEach(function (e) { years[App.yearOf(e.date)] = 1; });
         var yk = Object.keys(years).sort().reverse();
         var rows3 = yk.map(function (y) {
@@ -10275,7 +10874,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       }
 
       case 'invoices': {
-        var list = M.sales().filter(function (s) { return s.date >= from && s.date <= to; })
+        var list = M.sales().filter(function (s) { return !s.orderbook && s.date >= from && s.date <= to; })
           .sort(function (a, b) { return (b.date + b.createdAt) > (a.date + a.createdAt) ? 1 : -1; });
         var rows4 = list.map(function (s) {
           var paid = M.salePaid(s.id);
@@ -10306,7 +10905,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
       case 'product': {
         var agg = {};
-        M.sales().filter(function (s) { return s.status !== 'cancelled' && s.date >= from && s.date <= to; })
+        M.sales().filter(function (s) { return s.status !== 'cancelled' && !s.orderbook && s.date >= from && s.date <= to; })
           .forEach(function (s) {
             s.items.forEach(function (i) {
               var k = i.productId || ('free:' + i.name);
@@ -10339,7 +10938,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         var cg = {};
         M.CATEGORIES.forEach(function (c) { cg[c] = { qty: 0, amount: 0, cost: 0 }; });
         cg['Other / Custom'] = { qty: 0, amount: 0, cost: 0 };
-        M.sales().filter(function (s) { return s.status !== 'cancelled' && s.date >= from && s.date <= to; })
+        M.sales().filter(function (s) { return s.status !== 'cancelled' && !s.orderbook && s.date >= from && s.date <= to; })
           .forEach(function (s) {
             s.items.forEach(function (i) {
               var p = i.productId ? M.find('products', i.productId) : null;
@@ -10857,7 +11456,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         .then(function () { return Promise.all(drop.map(function (id) { return App.store.kvDel(copyKey(id)); })); })
         .then(function () {
           App.db.backupsIndex = v.map(meta);
-          App.store.touch();
+          App.store.touch('backupsIndex');
           return entry;
         });
     });
@@ -10870,7 +11469,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         .then(function () { return App.store.kvDel(copyKey(id)); })
         .then(function () {
           App.db.backupsIndex = v.map(meta);
-          App.store.touch();
+          App.store.touch('backupsIndex');
         });
     });
   };
@@ -11199,7 +11798,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     });
     App.el('#bkauto', el).addEventListener('change', function () {
       App.db.settings.autoBackup = this.checked;
-      App.store.touch();
+      App.store.touch('settings');
       App.toast(this.checked ? 'Automatic backup on' : 'Automatic backup off');
     });
 
@@ -11256,7 +11855,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           '<div class="eic" style="width:64px;height:64px;margin:0 auto 12px">' + App.icon('folder', 30) + '</div>' +
           '<div class="b mt8" style="font-size:17px">Choose a backup JSON file</div>' +
           '<div class="sm muted mt8 mb16">For example: backup_2026-09-01.json</div>' +
-          '<input type="file" id="rsfile" accept=".json,application/json" style="display:none">' +
+          '<input type="file" id="rsfile"' + (App.native() ? '' : ' accept=".json,application/json"') + ' style="display:none">' +
           '<button class="btn btn-primary btn-lg" id="rspick">Choose file</button>' +
           '<div class="sm muted mt16">Backed up by copying the text instead?</div>' +
           '<button class="btn mt8" id="rspaste">' + App.icon('clipboard', 18) + ' Paste backup text</button>' +
@@ -11366,7 +11965,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           '<dt>Backup version</dt><dd>' + p.version + (App.n(p.version) < App.SCHEMA_VERSION ? ' (older — it will be upgraded automatically)' : '') + '</dd>' +
           '<dt>App version</dt><dd>' + App.esc(p.appVersion) + '</dd>' +
         '</dl>' +
-        '<div class="tablewrap"><table class="tbl"><thead><tr><th>Data</th><th class="right">Abhi</th>' +
+        '<div class="tablewrap"><table class="tbl"><thead><tr><th>Data</th><th class="right">In the app now</th>' +
         '<th class="right">In file</th><th class="right">Difference</th></tr></thead><tbody>' +
         rowFor('customers', 'Customers') + rowFor('prescriptions', 'Prescriptions') +
         rowFor('products', 'Products') + rowFor('sales', 'Invoices') +
@@ -11485,7 +12084,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       '<small>Nothing is erased straight away. Anything here can be brought back.</small></div></div>';
     if (!t.length) html += UI.empty('restore', 'Trash is empty', 'You have not deleted anything yet');
     else {
-      html += '<div class="tablewrap"><table class="tbl"><thead><tr><th>Kya</th><th>Type</th><th>Kab</th><th></th></tr></thead><tbody>' +
+      html += '<div class="tablewrap"><table class="tbl"><thead><tr><th>What</th><th>Type</th><th>When</th><th></th></tr></thead><tbody>' +
         t.map(function (x) {
           return '<tr><td class="b">' + App.esc(x.label) + '</td>' +
             '<td><span class="pill p-mute">' + App.esc(collName(x.coll)) + '</span></td>' +
@@ -11538,12 +12137,12 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           '<label class="btn btn-sm">' + App.icon('image', 16) + '<span>' + (src ? 'Change logo' : 'Add logo') + '</span>' +
             '<input type="file" id="stlogo" accept="image/png,image/jpeg,image/webp" hidden></label>' +
           (src ? '<button class="btn btn-sm" id="stlogowhite" type="button">' + App.icon('image', 16) +
-            '<span>Clear white background</span></button>' : '') +
+            '<span>Clear logo background</span></button>' : '') +
           (src ? '<button class="btn btn-sm btn-ghost" id="stlogodel" type="button" style="color:var(--danger)">' +
             App.icon('trash', 16) + '<span>Remove</span></button>' : '') +
         '</div>' +
-        (src ? '<div class="help mt8">A logo saved as a photo carries a white square around it. ' +
-          '"Clear white background" wipes that white away so only the logo shows on the shop header and on bills.</div>' : '') +
+        (src ? '<div class="help mt8">A logo saved as a photo carries a square of colour around it — white or black. ' +
+          '"Clear logo background" wipes that colour away so only the logo itself shows on the shop header and on bills.</div>' : '') +
       '</div></div>';
   }
 
@@ -11570,7 +12169,42 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     return true;
   }
 
-  /* take the white off a logo that is already saved */
+  /* The flat colour sitting in all four corners — white, black or anything else.
+     Returns null when the corners disagree, so a photo is never eaten away. */
+  function cornerColour(cv) {
+    var ctx = cv.getContext('2d'), w = cv.width, h = cv.height, data;
+    try { data = ctx.getImageData(0, 0, w, h); } catch (e) { return null; }
+    var px = data.data, pick = [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2]], first = null;
+    for (var i = 0; i < pick.length; i++) {
+      var o = ((pick[i][1] * w) + pick[i][0]) * 4;
+      if (px[o + 3] < 200) return null;                       /* already see-through */
+      var c = { r: px[o], g: px[o + 1], b: px[o + 2] };
+      if (!first) first = c;
+      else if (Math.abs(c.r - first.r) + Math.abs(c.g - first.g) + Math.abs(c.b - first.b) > 40) return null;
+    }
+    return first;
+  }
+
+  /* make every pixel close to that colour see-through, with a soft edge */
+  function clearFlat(cv, col) {
+    var ctx = cv.getContext('2d'), data;
+    try { data = ctx.getImageData(0, 0, cv.width, cv.height); } catch (e) { return false; }
+    var px = data.data, changed = 0, near = 42, fade = 26;
+    for (var i = 0; i < px.length; i += 4) {
+      if (px[i + 3] === 0) continue;
+      var d = Math.abs(px[i] - col.r) + Math.abs(px[i + 1] - col.g) + Math.abs(px[i + 2] - col.b);
+      if (d <= near) { px[i + 3] = 0; changed++; }
+      else if (d <= near + fade) {
+        var a = Math.round(((d - near) / fade) * px[i + 3]);
+        if (a < px[i + 3]) { px[i + 3] = a; changed++; }
+      }
+    }
+    if (!changed) return false;
+    ctx.putImageData(data, 0, 0);
+    return true;
+  }
+
+  /* take the background off a logo that is already saved */
   function clearWhiteOnSaved(src) {
     return new Promise(function (resolve, reject) {
       var img = new Image();
@@ -11579,7 +12213,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
         var cv = document.createElement('canvas');
         cv.width = img.width; cv.height = img.height;
         cv.getContext('2d').drawImage(img, 0, 0);
-        if (!clearWhite(cv)) return reject(new Error('There is no white background to clear on this logo'));
+        var col = cornerColour(cv);
+        var done = col ? clearFlat(cv, col) : clearWhite(cv);
+        if (!done) return reject(new Error('This logo has no single background colour to clear — open it in a photo app and save it as a PNG with a see-through background.'));
         var out = App.safeImg(cv.toDataURL('image/png'));
         if (!out) return reject(new Error('This logo could not be used'));
         resolve(out);
@@ -11713,7 +12349,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       st.headerTagline = h.tagline.slice(0, 120);
       st.headerBg = h.bg;
       st.headerFg = h.fg;
-      App.store.touch();
+      App.store.touch('settings');
       App.store.saveNow();
       UI.renderShopHeader();
       App.toast('Shop header updated', 'ok');
@@ -11783,7 +12419,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       });
     }
     function changed(msg) {
-      App.store.touch();
+      App.store.touch('settings');
       App.store.saveNow();
       drawWhen();
       if (msg) App.toast(msg, 'ok', 2200);
@@ -11875,6 +12511,20 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       ]) +
       '<label class="switch mt12"><input type="checkbox" name="invoicePattern"' + (s.invoicePattern === false ? '' : ' checked') + '>' +
       '<span class="track"></span><span class="lb">Faint frames pattern behind the bill</span></label>' +
+      '<div class="f mt12"><label for="stmark">Faint mark behind the bill</label>' +
+        '<select id="stmark" name="billMark">' +
+          '<option value="name"' + (s.billMark === 'name' ? ' selected' : '') + '>Shop name</option>' +
+          '<option value="logo"' + (s.billMark === 'logo' ? ' selected' : '') + '>Shop logo</option>' +
+          '<option value="none"' + (s.billMark === 'none' ? ' selected' : '') + '>Nothing</option>' +
+        '</select>' +
+        '<div class="help">' + (App.safeImg(s.logo) ? 'Your logo is set, so either choice works.'
+                                                    : 'Add a logo below to use the logo mark.') + '</div></div>' +
+      '<div class="f"><label for="stlogobg">Logo background on the bill</label>' +
+        '<select id="stlogobg" name="billLogoBg">' +
+          '<option value="clear"' + (s.billLogoBg === 'clear' ? ' selected' : '') + '>No background (see-through)</option>' +
+          '<option value="white"' + (s.billLogoBg === 'white' ? ' selected' : '') + '>White box</option>' +
+          '<option value="soft"' + (s.billLogoBg === 'soft' ? ' selected' : '') + '>Soft tint</option>' +
+        '</select></div>' +
       '<div class="banner mt12">' + App.icon('file', 20) + '<div class="tx">Next bill: <b id="stprev">' + App.esc(s.invoicePrefix + App.pad(s.invoiceNextNo, s.invoicePadding)) + '</b></div></div>' +
       '</div></div>';
 
@@ -11923,6 +12573,11 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       '<label class="switch mb12"><input type="checkbox" id="stsimple" ' + (s.simpleMode ? 'checked' : '') + '>' +
       '<span class="track"></span><span class="lb">Large &amp; simple view</span></label>' +
       '<div class="sm muted mb12" style="margin-top:-6px">Bigger text and buttons \u2014 easier for everyone to read and tap.</div>' +
+      '<label class="switch mb12"><input type="checkbox" id="stprivate" ' + (s.privateNames ? 'checked' : '') + '>' +
+      '<span class="track"></span><span class="lb">Keep customer names private</span></label>' +
+      '<div class="sm muted mb12" style="margin-top:-6px">The customer, invoice and payment lists show initials and a hidden number ' +
+        '(R. K. \u00b7 98\u2022\u2022\u2022\u2022\u2022\u202270), so the app can be shown to someone without your register being on display. ' +
+        'Search for a customer and you see them in full, and bills print normally.</div>' +
       '<div class="flex gap8 wrap mb12"><button class="btn" id="sttour" type="button">' + App.icon('info', 18) + '<span>Take a guided tour</span></button></div>' +
       UI.formHTML([
         { k: 'lowStockGlobal', label: 'Default minimum stock for new products', type: 'number', value: s.lowStockGlobal, attrs: 'inputmode="numeric" step="1" min="0"' }
@@ -11968,13 +12623,20 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
     App.el('#stdark', view).addEventListener('change', function () {
       App.db.settings.theme = this.checked ? 'dark' : 'light';
-      App.store.touch(); UI.applyTheme();
+      App.store.touch('settings'); UI.applyTheme();
+    });
+
+    var stPrivate = App.el('#stprivate', view);
+    if (stPrivate) stPrivate.addEventListener('change', function () {
+      App.db.settings.privateNames = this.checked;
+      App.store.touch('settings'); App.store.saveNow();
+      App.toast(this.checked ? 'Customer names are now hidden in the lists' : 'Customer names are shown again', 'ok', 3000);
     });
 
     var stSimple = App.el('#stsimple', view);
     if (stSimple) stSimple.addEventListener('change', function () {
       App.db.settings.simpleMode = this.checked;
-      App.store.touch(); App.store.saveNow(); UI.applyTheme();
+      App.store.touch('settings'); App.store.saveNow(); UI.applyTheme();
       App.toast(this.checked ? 'Large & simple view on' : 'Large & simple view off', 'ok', 2500);
     });
 
@@ -11991,7 +12653,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       if (!file) return;
       readLogo(file).then(function (data) {
         App.db.settings.logo = data;
-        App.store.touch();
+        App.store.touch('settings');
         App.el('#stlogobox', view).innerHTML = logoBlock(data);
         UI.renderShopHeader();
         var ht = App.el('[name="headerTitle"]', view); if (ht) ht.dispatchEvent(new Event('input'));
@@ -12006,10 +12668,10 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       btn.disabled = true;
       clearWhiteOnSaved(App.safeImg(App.db.settings.logo)).then(function (data) {
         App.db.settings.logo = data;
-        App.store.touch();
+        App.store.touch('settings');
         App.el('#stlogobox', view).innerHTML = logoBlock(data);
         UI.renderShopHeader();
-        App.toast('White background cleared', 'ok');
+        App.toast('Logo background cleared', 'ok');
       }, function (err) {
         btn.disabled = false;
         App.toast(err.message, 'err', 5000);
@@ -12017,7 +12679,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     });
     App.on(view, 'click', '#stlogodel', function () {
       App.db.settings.logo = '';
-      App.store.touch();
+      App.store.touch('settings');
       App.el('#stlogobox', view).innerHTML = logoBlock('');
       UI.renderShopHeader();
       var ht = App.el('[name="headerTitle"]', view); if (ht) ht.dispatchEvent(new Event('input'));
@@ -12029,7 +12691,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       if (on) setPin();
       else {
         UI.confirm({ title: 'Remove PIN?', message: 'The app will open without asking for a PIN.', okLabel: 'Yes' }).then(function (ok) {
-          if (ok) { App.db.settings.pinEnabled = false; App.db.settings.pinHash = ''; App.store.touch(); App.toast('PIN removed'); }
+          if (ok) { App.db.settings.pinEnabled = false; App.db.settings.pinHash = ''; App.store.touch('settings'); App.toast('PIN removed'); }
           UI.render();
         });
       }
@@ -12046,6 +12708,9 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       st.invoiceNextNo = Math.max(1, Math.round(App.n(f.invoiceNextNo)) || 1);
       st.rxNextNo = Math.max(1, Math.round(App.n(f.rxNextNo)) || 1);
       st.invoicePattern = !!f.invoicePattern;
+      st.billMark = ['name', 'logo', 'none'].indexOf(f.billMark) >= 0 ? f.billMark : 'name';
+      st.billLogoBg = ['clear', 'white', 'soft'].indexOf(f.billLogoBg) >= 0 ? f.billLogoBg : 'clear';
+      st.invoiceWatermark = st.billMark !== 'none';   /* older backups read this one */
       st.invoicePadding = Math.min(8, Math.max(1, Math.round(App.n(f.invoicePadding)) || 4));
       st.taxEnabled = !!f.taxEnabled;
       st.taxInclusive = !!f.taxInclusive;
@@ -12063,7 +12728,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       st.headerFg = App.safeColor(f.headerFg, '#FFFFFF');
       var tpl = String(f.whatsappTemplate || '').replace(/\r/g, '').trim();
       st.whatsappTemplate = tpl === App.Invoice.DEFAULT_TEMPLATE.trim() ? '' : tpl;
-      App.store.touch();
+      App.store.touch('settings');
       App.store.saveNow().then(function () {
         App.toast('Settings saved', 'ok');
         UI.renderShopHeader();
@@ -12092,7 +12757,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
             if (d.pin1 !== d.pin2) return UI.markError(a.el, 'pin2', 'The two PINs do not match');
             App.db.settings.pinEnabled = true;
             App.db.settings.pinHash = App.hashPin(d.pin1);
-            App.store.touch(); App.store.saveNow();
+            App.store.touch('settings'); App.store.saveNow();
             a.close();
             App.toast('PIN lock is now on', 'ok');
             UI.render();
@@ -12417,7 +13082,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     state = null;
     try {
       App.db.settings.tourDone = true;
-      App.store.touch(); App.store.saveNow();
+      App.store.touch('settings'); App.store.saveNow();
     } catch (e) {}
     if (completed) App.toast('Tour finished — enjoy! You can replay it from Settings.', 'ok', 4000);
   }
@@ -12437,6 +13102,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     { k: 'dashboard', i: 'home', l: 'Dashboard' },
     { k: 'sale',      i: 'receipt', l: 'New Bill', href: '/sale/new' },
     { k: 'sales',     i: 'list', l: 'Sales / Invoices' },
+    { k: 'orderbook', i: 'receipt', l: 'Order Forum' },
     { k: 'payments',  i: 'wallet', l: 'Payments' },
     { k: 'expenses',  i: 'trendDown', l: 'Expenses' },
     { g: 'Records' },
@@ -12623,6 +13289,11 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       var boot = App.el('#boot');
       if (boot) boot.remove();
 
+      if (how === 'partial') {
+        App.toast('Part of your data could not be read. The app will not save anything until you restore a backup — ' +
+          'open Backup & Restore.', 'err', 15000);
+        setTimeout(function () { UI.go('/backup?tab=restore'); }, 1500);
+      }
       if (how === 'recovered') {
         App.toast('Opened from the last known-good copy of your data', 'warn', 6000);
       }
@@ -12646,7 +13317,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
                   var d = UI.readForm(a.el);
                   if (d.shopName.trim()) App.db.settings.shopName = d.shopName.trim();
                   if (d.phone.trim()) App.db.settings.phone = d.phone.trim();
-                  App.store.touch(); App.store.saveNow();
+                  App.store.touch('settings'); App.store.saveNow();
                   UI.renderShopHeader();
                   a.close();
                   UI.render();
@@ -12683,8 +13354,19 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     } catch (e) {}
   }
 
+  /* The Android shell reloads the page with ?recovered=1 when the tablet killed it for memory.
+     Say so plainly instead of leaving people wondering why the screen reset. */
+  function tellIfRecovered() {
+    if (location.search.indexOf('recovered=1') < 0) return;
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+    setTimeout(function () {
+      App.toast('The app restarted — the tablet ran low on memory. Everything you had saved is safe.', 'warn', 9000);
+    }, 1200);
+  }
+
   function boot() {
     if (App.db) return;
+    tellIfRecovered();
     if (App.license && App.license.required && App.license.required()) { App.license.guard(startBoot); return; }
     startBoot();
   }
