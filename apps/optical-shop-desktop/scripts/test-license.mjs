@@ -21,11 +21,11 @@ check("rejects a random code", m.activate("#ZZZZ-ZZZZ-ZZZZ").code === "invalid")
 
 const code = c.generate();
 check("activates a genuine code", m.activate(code).ok === true);
-check("active with 7 days left", m.status().state === "active" && m.status().daysLeft === 7);
+check("active with 15 days left", m.status().state === "active" && m.status().daysLeft === 15);
 check("refuses the same code again", m.activate(code).code === "used");
 
-fake = realNow + 8 * DAY;
-check("locks after 7 days", m.status().state === "expired");
+fake = realNow + 16 * DAY;
+check("locks after 15 days", m.status().state === "expired");
 
 check("a new code unlocks again", m.activate(c.generate()).ok === true);
 check("active again", m.status().state === "active");
