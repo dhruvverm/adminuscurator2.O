@@ -1,8 +1,8 @@
 {
   "name": "optical-shop-manager-desktop",
   "productName": "Adminuscurator",
-  "version": "1.25.6",
-  "description": "Adminuscurator \u2014 offline shop management and accounting.",
+  "version": "1.25.7",
+  "description": "Adminuscurator — offline shop management and accounting.",
   "author": "Adminuscurator",
   "license": "UNLICENSED",
   "private": true,
@@ -19,7 +19,7 @@
   "build": {
     "appId": "com.adminuscurator.desktop",
     "productName": "Adminuscurator",
-    "copyright": "Copyright \u00a9 2026 Adminuscurator",
+    "copyright": "Copyright © 2026 Adminuscurator",
     "directories": {
       "output": "dist",
       "buildResources": "build"

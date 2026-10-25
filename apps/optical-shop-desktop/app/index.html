@@ -1788,12 +1788,18 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   function status() {
     return load().then(function (s) {
       var now = Date.now();
-      if (s.lastSeen && now < s.lastSeen - SKEW)
-        return { state: 'clock', message: 'The date and time on this device look wrong. Set the correct date and time, then reopen the app.' };
-      if (now > s.lastSeen) { s.lastSeen = now; save(s); }
       if (s.tampered) return { state: 'locked', message: 'Saved activation could not be verified. Please enter a valid code.' };
+      // Lifetime / paid access never depends on the device clock — a wrong clock must never lock a paying user out.
+      if (s.active && (s.active.kind === 'lifetime' || s.active.expiresAt === null)) {
+        if (now > s.lastSeen) { s.lastSeen = now; save(s); }
+        return { state: 'active', kind: 'lifetime', daysLeft: null };
+      }
+      // Clock-rollback guard applies only while a trial is actually running.
+      if (s.active && s.active.expiresAt && s.lastSeen && now < s.lastSeen - SKEW)
+        return { state: 'clock', message: 'The date and time on this device look wrong. Set the correct date and time, then reopen the app.' };
+      // Advance the high-water mark, but never past what trial-expiry enforcement needs, so a forward clock glitch cannot lock the app permanently.
+      if (now > s.lastSeen) { s.lastSeen = (s.active && s.active.expiresAt) ? Math.min(now, s.active.expiresAt + SKEW) : now; save(s); }
       if (s.active) {
-        if (s.active.kind === 'lifetime' || s.active.expiresAt === null) return { state: 'active', kind: 'lifetime', daysLeft: null };
         var remaining = s.active.expiresAt - Math.max(now, s.lastSeen);
         if (remaining > 0) return { state: 'active', kind: 'trial', expiresAt: s.active.expiresAt, daysLeft: Math.ceil(remaining / DAY) };
         return { state: 'expired', message: 'Your ' + TRIAL_DAYS + '-day access has ended. Enter a new activation code to continue.' };
@@ -1805,10 +1811,10 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   function activate(input) {
     return Promise.all([load(), verify(input)]).then(function (r) {
       var s = r[0], parsed = r[1], now = Date.now();
-      if (s.lastSeen && now < s.lastSeen - SKEW) return { ok: false, code: 'clock', message: 'The date and time on this device look wrong. Set them correctly and try again.' };
       if (!parsed) return { ok: false, code: 'invalid', message: 'That code is not valid. Please check it and try again.' };
       if (s.used[parsed.id]) return { ok: false, code: 'used', message: 'This code has already been used on this device and cannot be used again.' };
-      var startedAt = Math.max(now, s.lastSeen);
+      // A fresh, unused code always activates and resets the clock high-water mark, so a wrong device clock can never block activation.
+      var startedAt = now;
       var expiresAt = parsed.kind === 'lifetime' ? null : startedAt + TRIAL_MS;
       s.used[parsed.id] = { kind: parsed.kind, activatedAt: startedAt, expiresAt: expiresAt };
       s.active = { id: parsed.id, kind: parsed.kind, activatedAt: startedAt, expiresAt: expiresAt };
@@ -3062,7 +3068,7 @@ Minimum version required to store current data is: `+i+`.
     }
     for (i = keep ? (ix.n.sales || 0) : 0; i < d.sales.length; i++) {
       x = d.sales[i];
-      if (x.deletedAt || !x.customerId) continue;
+      if (x.deletedAt || !x.customerId || x.orderbook) continue; // Order Forum bills aren't sales yet — keep them out of customer totals/outstanding (matches Reports)
       (ix.salesByCust[x.customerId] = ix.salesByCust[x.customerId] || []).push(x);
       ix.billed[x.customerId] = (ix.billed[x.customerId] || 0) + App.n(x.total);
       touchedS[x.customerId] = 1;
@@ -3072,6 +3078,8 @@ Minimum version required to store current data is: `+i+`.
       if (x.deletedAt) continue;
       if (x.saleId) ix.paidBySale[x.saleId] = (ix.paidBySale[x.saleId] || 0) + App.n(x.amount);
       if (!x.customerId) continue;
+      var osale = x.saleId ? (ix.byId.sales && ix.byId.sales[x.saleId]) : null;
+      if (osale && osale.orderbook) continue; // advance on an Order Forum bill stays out of customer credit/outstanding (matches Reports)
       (ix.paysByCust[x.customerId] = ix.paysByCust[x.customerId] || []).push(x);
       ix.paid[x.customerId] = (ix.paid[x.customerId] || 0) + App.n(x.amount);
       touchedP[x.customerId] = 1;
@@ -4430,7 +4438,7 @@ Minimum version required to store current data is: `+i+`.
     if (qi >= 0) {
       h.slice(qi + 1).split('&').forEach(function (kv) {
         var p = kv.split('=');
-        query[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || '');
+        try { query[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || ''); } catch (e) { query[p[0]] = p[1] || ''; }
       });
       h = h.slice(0, qi);
     }
@@ -5148,7 +5156,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     if (set.gstin) body += '<div class="r-c r-sm">GSTIN: ' + e(set.gstin) + '</div>';
     body += '<div class="r-hr"></div>';
     body += '<div class="r-row"><span>' + (d.title) + ': ' + e(s.invoiceNo) + '</span></div>';
-    body += '<div class="r-row r-sm"><span>' + App.fmtDate(s.date) + '</span><span>' + App.fmtDateTime(s.createdAt).split(', ')[1] + '</span></div>';
+    body += '<div class="r-row r-sm"><span>' + App.fmtDate(s.date) + '</span><span>' + (App.fmtDateTime(s.createdAt).split(', ')[1] || '') + '</span></div>';
     if (d.name && d.name !== 'Walk-in customer') body += '<div class="r-row r-sm"><span>' + e(d.name) + '</span><span>' + e(d.mobile || '') + '</span></div>';
     body += '<div class="r-hr"></div>';
     body += '<table class="r-items"><tbody>';
@@ -7929,13 +7937,16 @@ var prod = i.productId ? M.find('products', i.productId) : null;
   }
   function sheetRows(xml, shared, dates) {
     var rows = [], maxC = -1;
+    var MAXR = 1048576, MAXC = 16384; // Excel's sheet limits — never allocate beyond these (guards against a crafted/stray row or column index that would freeze/OOM the app)
     xml.replace(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g, function (m, attrs, inner) {
       var rn = /r="(\d+)"/.exec(attrs);
       var idx = rn ? (+rn[1]) - 1 : rows.length;
+      if (idx < 0 || idx > MAXR) return m; // skip an out-of-range row rather than allocating up to it
       var row = [];
       String(inner || '').replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, function (m2, cattrs, body) {
         var ref = /r="([A-Z]+)\d+"/.exec(cattrs), ty = /t="([^"]+)"/.exec(cattrs), st = /s="(\d+)"/.exec(cattrs);
         var col = ref ? colNum(ref[1]) : row.length, val = '';
+        if (col < 0 || col > MAXC) return m2; // skip an out-of-range column rather than allocating up to it
         if (body) {
           if (ty && ty[1] === 'inlineStr') {
             var is = /<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/.exec(body);
@@ -10998,7 +11009,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       }
 
       case 'collection': {
-        var pays = M.payments().filter(function (p) { return p.date >= from && p.date <= to; })
+        var obIds = {}; M.sales().forEach(function (s) { if (s.orderbook) obIds[s.id] = 1; });
+        var pays = M.payments().filter(function (p) { return p.date >= from && p.date <= to && !obIds[p.saleId]; })
           .sort(function (a, b) { return (b.date + b.createdAt) > (a.date + a.createdAt) ? 1 : -1; });
         var byM = {};
         pays.forEach(function (p) { byM[p.method] = App.round2(App.n(byM[p.method]) + App.n(p.amount)); });
@@ -11059,7 +11071,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       }
 
       case 'gst': {
-        var gs = M.sales().filter(function (s) { return s.status !== 'cancelled' && s.date >= from && s.date <= to && App.n(s.taxAmount) > 0; });
+        var gs = M.sales().filter(function (s) { return s.status !== 'cancelled' && !s.orderbook && s.date >= from && s.date <= to && App.n(s.taxAmount) > 0; });
         var byRate = App.groupBy(gs, function (s) { return App.n(s.taxPercent); });
         var rows6 = Object.keys(byRate).sort().map(function (rate) {
           var g3 = byRate[rate];

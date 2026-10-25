@@ -1,8 +1,8 @@
 {
   "name": "adminuscurator-retail-desktop",
   "productName": "Adminuscurator Retail",
-  "version": "1.25.4",
-  "description": "Adminuscurator Retail \u2014 offline clothing shop management and accounting.",
+  "version": "1.25.5",
+  "description": "Adminuscurator Retail — offline clothing shop management and accounting.",
   "author": "Adminuscurator",
   "license": "UNLICENSED",
   "private": true,
@@ -19,7 +19,7 @@
   "build": {
     "appId": "com.adminuscurator.retail.desktop",
     "productName": "Adminuscurator Retail",
-    "copyright": "Copyright \u00a9 2026 Adminuscurator",
+    "copyright": "Copyright © 2026 Adminuscurator",
     "directories": {
       "output": "dist",
       "buildResources": "build"

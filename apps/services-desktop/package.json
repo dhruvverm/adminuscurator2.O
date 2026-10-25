@@ -1,8 +1,8 @@
 {
   "name": "adminuscurator-services-desktop",
   "productName": "Adminuscurator Services",
-  "version": "1.25.4",
-  "description": "Adminuscurator Services \u2014 offline service business management and accounting.",
+  "version": "1.25.5",
+  "description": "Adminuscurator Services — offline service business management and accounting.",
   "author": "Adminuscurator",
   "license": "UNLICENSED",
   "private": true,
@@ -19,7 +19,7 @@
   "build": {
     "appId": "com.adminuscurator.services.desktop",
     "productName": "Adminuscurator Services",
-    "copyright": "Copyright \u00a9 2026 Adminuscurator",
+    "copyright": "Copyright © 2026 Adminuscurator",
     "directories": {
       "output": "dist",
       "buildResources": "build"

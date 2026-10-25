@@ -1,8 +1,8 @@
 {
   "name": "adminuscurator-pos-desktop",
   "productName": "Adminuscurator POS",
-  "version": "1.25.11",
-  "description": "Adminuscurator POS \u2014 offline clothing shop management and accounting.",
+  "version": "1.25.12",
+  "description": "Adminuscurator POS — offline clothing shop management and accounting.",
   "author": "Adminuscurator",
   "license": "UNLICENSED",
   "private": true,
@@ -19,7 +19,7 @@
   "build": {
     "appId": "com.adminuscurator.pos.desktop",
     "productName": "Adminuscurator POS",
-    "copyright": "Copyright \u00a9 2026 Adminuscurator",
+    "copyright": "Copyright © 2026 Adminuscurator",
     "directories": {
       "output": "dist",
       "buildResources": "build"
