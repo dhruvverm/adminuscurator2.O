@@ -1966,6 +1966,8 @@ if (typeof window !== 'undefined' && window.addEventListener) {
     archive:   'M3.6 4.6h16.8v3.6H3.6ZM5.4 8.2v10.4a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8V8.2M10 12h4',
     filter:    'M3.4 5.2h17.2l-6.7 7.9v5.7l-3.8 1.9v-7.6Z',
     calendar:  'M5.4 5.4h13.2a1.8 1.8 0 0 1 1.8 1.8v12a1.8 1.8 0 0 1-1.8 1.8H5.4a1.8 1.8 0 0 1-1.8-1.8v-12a1.8 1.8 0 0 1 1.8-1.8ZM8.4 3.4v4M15.6 3.4v4M3.6 10.6h16.8',
+    bell:      'M18 8.4a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 20.4a1.95 1.95 0 0 1-3.4 0',
+    gift:      'M20 12v8.6H4V12M2.4 7.6h19.2V12H2.4zM12 20.6V7.6M12 7.6H7.6a2.2 2.2 0 1 1 0-4.4C10.6 3.2 12 7.6 12 7.6ZM12 7.6h4.4a2.2 2.2 0 1 0 0-4.4C13.4 3.2 12 7.6 12 7.6Z',
     camera:    'M14.6 4.4H9.4L8 6.4H4.4a1.8 1.8 0 0 0-1.8 1.8v9.6a1.8 1.8 0 0 0 1.8 1.8h15.2a1.8 1.8 0 0 0 1.8-1.8V8.2a1.8 1.8 0 0 0-1.8-1.8H16ZM12 16.4a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z',
     file:      'M13.4 3.4H6.8A1.8 1.8 0 0 0 5 5.2v13.6a1.8 1.8 0 0 0 1.8 1.8h10.4a1.8 1.8 0 0 0 1.8-1.8V8.4ZM13.4 3.4v5h5.6',
 
@@ -3369,6 +3371,65 @@ Minimum version required to store current data is: `+i+`.
       if (d <= (withinDays === undefined ? 30 : withinDays)) {
         var c = M.find('customers', r.customerId);
         if (c && !c.deletedAt) out.push({ rx: r, customer: c, inDays: d });
+      }
+    });
+    return out.sort(function (a, b) { return a.inDays - b.inDays; });
+  };
+
+  /* Add n calendar months to a 'YYYY-MM-DD', clamping to the month end
+     (31 Jan + 1 month -> 28/29 Feb). Returns a local 'YYYY-MM-DD'. */
+  M.addMonthsStr = function (iso, n) {
+    if (!iso) return '';
+    var p = String(iso).slice(0, 10).split('-');
+    var y = +p[0], mo = +p[1] - 1, day = +p[2];
+    if (!y || !p[1] || !day) return '';
+    var d = new Date(y, mo, 1, 12, 0, 0);
+    d.setMonth(d.getMonth() + n);
+    var last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, last));
+    return App.dstr(d);
+  };
+
+  /* Customers due for a routine follow-up call — FOLLOWUP_MONTHS after their
+     last visit. A rolling window: shown from `aheadDays` before the due date
+     until `staleDays` after, so the list stays useful and never nags forever.
+     Order Forum (not-yet-a-sale) bills don't count as a visit (stats exclude them). */
+  M.FOLLOWUP_MONTHS = 3;
+  M.followUpsAuto = function (opts) {
+    opts = opts || {};
+    var aheadDays = opts.aheadDays === undefined ? 7 : opts.aheadDays;
+    var staleDays = opts.staleDays === undefined ? 60 : opts.staleDays;
+    var today = App.today(), out = [];
+    M.customers().forEach(function (c) {
+      var st = M.customerStats(c.id);
+      if (!st.lastVisit) return;
+      var due = M.addMonthsStr(st.lastVisit, M.FOLLOWUP_MONTHS);
+      if (!due) return;
+      var inDays = App.daysBetween(today, due);           /* >0 = upcoming, <0 = overdue */
+      if (inDays <= aheadDays && inDays >= -staleDays)
+        out.push({ customer: c, lastVisit: st.lastVisit, dueDate: due, inDays: inDays });
+    });
+    return out.sort(function (a, b) { return a.inDays - b.inDays; });
+  };
+
+  /* Customers whose birthday (from their saved Date of birth) falls within the
+     next `withinDays` days, including today. Returns the next occurrence date,
+     days until it, and the age they will turn. */
+  M.birthdaysDue = function (withinDays) {
+    withinDays = withinDays === undefined ? 7 : withinDays;
+    var today = App.today(), tObj = new Date(today + 'T12:00:00'), out = [];
+    M.customers().forEach(function (c) {
+      if (!c.dob) return;
+      var p = String(c.dob).slice(0, 10).split('-');
+      var by = +p[0], bm = +p[1], bd = +p[2];
+      if (!bm || !bd) return;
+      var occ = App.dstr(new Date(tObj.getFullYear(), bm - 1, bd, 12, 0, 0));
+      if (App.daysBetween(today, occ) < 0)
+        occ = App.dstr(new Date(tObj.getFullYear() + 1, bm - 1, bd, 12, 0, 0));
+      var inDays = App.daysBetween(today, occ);
+      if (inDays <= withinDays) {
+        var age = by ? (+occ.slice(0, 4) - by) : null;
+        out.push({ customer: c, date: occ, inDays: inDays, age: age });
       }
     });
     return out.sort(function (a, b) { return a.inDays - b.inDays; });
@@ -6073,6 +6134,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     var totalOut = M.totalOutstanding();
     var custWithDues = Object.keys(outMap).filter(function (k) { return outMap[k] > 0.5; }).length;
     var followUps = M.followUpsDue(7);
+    var autoFollow = M.followUpsAuto();
+    var birthdays = M.birthdaysDue(7);
 
     var html = '';
 
@@ -6157,6 +6220,26 @@ var prod = i.productId ? M.find('products', i.productId) : null;
           return f.customer.name + (f.inDays < 0 ? ' (' + Math.abs(f.inDays) + ' days late)' : f.inDays === 0 ? ' (today)' : ' (in ' + f.inDays + ' days)');
         }).join(', ')) + '</small></div>' +
         '<button class="btn btn-sm" data-go="/reports?r=followup">View</button></div>';
+    }
+
+    /* ---- 3-month follow-up reminders ---- */
+    if (autoFollow.length) {
+      html += '<div class="banner mb16">' + App.icon('bell', 20) + '' +
+        '<div class="tx">' + autoFollow.length + (autoFollow.length === 1 ? ' customer is' : ' customers are') + ' due for a 3-month follow-up' +
+        '<small>' + App.esc(autoFollow.slice(0, 3).map(function (f) {
+          return f.customer.name + (f.inDays < 0 ? ' (' + Math.abs(f.inDays) + ' days overdue)' : f.inDays === 0 ? ' (today)' : ' (in ' + f.inDays + ' days)');
+        }).join(', ')) + '</small></div>' +
+        '<button class="btn btn-sm" data-go="/reminders">View</button></div>';
+    }
+
+    /* ---- birthday reminders ---- */
+    if (birthdays.length) {
+      html += '<div class="banner mb16">' + App.icon('gift', 20) + '' +
+        '<div class="tx">' + birthdays.length + (birthdays.length === 1 ? ' customer has' : ' customers have') + ' a birthday this week' +
+        '<small>' + App.esc(birthdays.slice(0, 3).map(function (b) {
+          return b.customer.name + (b.inDays === 0 ? ' (today)' : ' (in ' + b.inDays + ' day' + (b.inDays === 1 ? '' : 's') + ')');
+        }).join(', ')) + '</small></div>' +
+        '<button class="btn btn-sm" data-go="/reminders">View</button></div>';
     }
 
     /* ---- recent lists ---- */
@@ -13102,6 +13185,86 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 })();
 
 
+/* ===== 53-reminders.js ===== */
+/* =========================================================================
+   53-reminders.js — customer reminders: 3-month check-up follow-ups + birthdays
+   ========================================================================= */
+(function () {
+  'use strict';
+  var UI = App.UI, M = App.M;
+
+  function dueLabel(inDays) {
+    return inDays === 0 ? 'Today' :
+      inDays > 0 ? 'in ' + inDays + ' day' + (inDays === 1 ? '' : 's') :
+      Math.abs(inDays) + ' day' + (inDays === -1 ? '' : 's') + ' ago';
+  }
+
+  /* An action button: Call (tel:) or WhatsApp (wa.me). Returns '' when no usable number. */
+  function actions(c, waMsg) {
+    var num = App.waNumber(c.mobile);
+    var tel = String(c.mobile || '').replace(/[^\d+]/g, '');
+    var out = '';
+    if (tel) out += '<a class="btn btn-sm" href="tel:' + App.esc(tel) + '">' + App.icon('phone', 15) + ' Call</a>';
+    if (num) out += '<a class="btn btn-sm" href="https://wa.me/' + num + '?text=' + encodeURIComponent(waMsg) +
+      '" target="_blank" rel="noopener">' + App.icon('chat', 15) + ' WhatsApp</a>';
+    return out ? '<div class="flex gap8 wrap">' + out + '</div>' : '<span class="dim tiny">No number</span>';
+  }
+
+  UI.route('reminders', function (view, r) {
+    var shop = (App.db.settings && App.db.settings.shopName) || 'our shop';
+    var fu = M.followUpsAuto();
+    var bdays = M.birthdaysDue(30);
+
+    var html =
+      '<div class="view-head"><div><h1>Reminders</h1>' +
+      '<div class="sub">' +
+        (fu.length ? fu.length + ' follow-up' + (fu.length === 1 ? '' : 's') : 'No follow-ups') + ' · ' +
+        (bdays.length ? bdays.length + ' birthday' + (bdays.length === 1 ? '' : 's') + ' in the next 30 days' : 'No upcoming birthdays') +
+      '</div></div></div>';
+
+    /* ---- 3-month check-up follow-ups ---- */
+    html += '<div class="card mb16"><div class="card-head"><h3>' + App.icon('eye', 17) + ' Check-up follow-ups</h3>' +
+      '<div class="sub">About ' + M.FOLLOWUP_MONTHS + ' months since the customer\'s last visit</div></div>';
+    if (!fu.length) html += UI.empty('check', 'Nobody due right now', 'Follow-ups appear here around 3 months after a customer\'s last bill.');
+    else {
+      html += '<div class="tablewrap"><table class="tbl"><tbody>' + fu.map(function (f) {
+        var c = f.customer;
+        var msg = 'Dear ' + c.name + ', it has been about ' + M.FOLLOWUP_MONTHS +
+          ' months since your last visit to ' + shop + '. It may be a good time for an eye check-up — we would be happy to see you.';
+        return '<tr>' +
+          '<td class="clickable" data-go="/customer/' + c.id + '"><div class="b">' + App.esc(c.name) + '</div>' +
+          '<div class="tiny dim">Last visit ' + App.fmtDate(f.lastVisit) + ' · due ' + dueLabel(f.inDays) +
+          (f.inDays < 0 ? ' <span class="pill p-danger">overdue</span>' : f.inDays === 0 ? ' <span class="pill p-ok">today</span>' : '') +
+          '</div></td>' +
+          '<td class="right">' + actions(c, msg) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    }
+    html += '</div>';
+
+    /* ---- birthdays ---- */
+    html += '<div class="card"><div class="card-head"><h3>' + App.icon('gift', 17) + ' Birthdays</h3>' +
+      '<div class="sub">Next 30 days — wish your customers and invite them in</div></div>';
+    if (!bdays.length) html += UI.empty('gift', 'No birthdays coming up', 'Add a customer\'s Date of birth to get a reminder here.');
+    else {
+      html += '<div class="tablewrap"><table class="tbl"><tbody>' + bdays.map(function (b) {
+        var c = b.customer;
+        var msg = 'Dear ' + c.name + ', wishing you a very Happy Birthday from all of us at ' + shop +
+          '! Do visit us — we have something special for you on your eyewear.';
+        return '<tr>' +
+          '<td class="clickable" data-go="/customer/' + c.id + '"><div class="b">' + App.esc(c.name) +
+          (b.inDays === 0 ? ' <span class="pill p-ok">today</span>' : '') + '</div>' +
+          '<div class="tiny dim">' + App.fmtDate(b.date) + ' · ' + dueLabel(b.inDays) +
+          (b.age ? ' · turning ' + b.age : '') + '</div></td>' +
+          '<td class="right">' + actions(c, msg) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    }
+    html += '</div>';
+
+    view.innerHTML = html;
+  });
+})();
+
+
 /* ===== 99-boot.js ===== */
 /* =========================================================================
    99-boot.js — sidebar, global search, startup sequence
@@ -13118,6 +13281,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     { k: 'orderbook', i: 'receipt', l: 'Order Forum' },
     { k: 'payments',  i: 'wallet', l: 'Payments' },
     { k: 'expenses',  i: 'trendDown', l: 'Expenses' },
+    { k: 'reminders', i: 'bell', l: 'Reminders' },
     { g: 'Records' },
     { k: 'customers', i: 'users', l: 'Customers' },
     { k: 'products',  i: 'box', l: 'Products & Stock', badge: true },
