@@ -229,7 +229,7 @@ export const defaultProducts: Product[] = [
  * and link them as "/files/…", or use store URLs. Leave a platform's URL
  * empty when it isn't available — that option is then disabled.
  */
-const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.7";
+const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.8";
 const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.5";
 const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.5";
 const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.12";
@@ -263,17 +263,17 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. Installs as an app on Android, Windows and Mac; no internet or account needed, and your data stays on your device.",
     logo: "/brand/app-icon.svg",
     icon: "eye",
-    version: "1.25.7",
-    releaseDate: "2026-10-25",
+    version: "1.25.8",
+    releaseDate: "2026-10-28",
     // Android app (APK) for phones and tablets — served from this site
     mobileUrl: "/files/Adminuscurator-1.25.4.apk",
     mobileSize: "200 KB",
     tabletUrl: "/files/Adminuscurator-1.25.4.apk",
     tabletSize: "200 KB",
     // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
-    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.7.exe`,
+    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.8.exe`,
     windowsSize: "106 MB",
-    macUrl: `${RELEASE}/Adminuscurator-1.25.7-mac.dmg`,
+    macUrl: `${RELEASE}/Adminuscurator-1.25.8-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
