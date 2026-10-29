@@ -50,7 +50,7 @@ export const siteConfig = {
     email: "adminuscurator@gmail.com",
     salesEmail: "adminuscurator@gmail.com",
     supportEmail: "adminuscurator@gmail.com",
-    phone: "+1 (000) 000-0000",
+    phone: "+91 82876 14772",
     address: "[Street Address], [City], [State/Region] [Postal Code], [Country]",
     hours: "Monday – Friday, 9:00 AM – 6:00 PM [Time Zone]",
     /**
