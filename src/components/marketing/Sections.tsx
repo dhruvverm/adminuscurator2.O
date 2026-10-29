@@ -52,6 +52,8 @@ export function Hero() {
   return (
     <section className="hero" aria-labelledby="hero-title">
       <div className="hero__bg" aria-hidden="true" />
+      <span className="hero__orb hero__orb--a" aria-hidden="true" />
+      <span className="hero__orb hero__orb--b" aria-hidden="true" />
       <div className="container hero__grid">
         <div className="hero__copy">
           <span className="badge hero-in">

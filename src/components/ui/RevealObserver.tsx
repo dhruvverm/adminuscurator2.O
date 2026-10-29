@@ -32,5 +32,37 @@ export function RevealObserver() {
     return () => io.disconnect();
   }, [pathname]);
 
+  // Scroll-progress bar across the top of the page.
+  useEffect(() => {
+    let bar = document.getElementById("scroll-progress");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "scroll-progress";
+      bar.setAttribute("aria-hidden", "true");
+      document.body.appendChild(bar);
+    }
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      const pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+      (bar as HTMLElement).style.width = pct + "%";
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [pathname]);
+
   return null;
 }

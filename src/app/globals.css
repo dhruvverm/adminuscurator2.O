@@ -4,9 +4,9 @@
    src/config/site.ts on <html>, so rebranding never requires editing CSS.
    ========================================================================== */
 :root {
-  --brand: #4f46e5;
-  --brand-strong: #4338ca;
-  --accent: #06b6d4;
+  --brand: #42634B;
+  --brand-strong: #35503C;
+  --accent: #78966D;
   --ink: #0b1220;
 
   --brand-soft: color-mix(in srgb, var(--brand) 9%, #fff);
@@ -15,7 +15,7 @@
   --gradient: linear-gradient(120deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 55%, var(--accent)) 100%);
 
   --bg: #ffffff;
-  --bg-soft: #f7f8fc;
+  --bg-soft: #f7f8f3;
   --surface: #ffffff;
   --border: #e7e9f1;
   --border-strong: #d7dbe7;
@@ -3401,4 +3401,96 @@ ol.checkout-steps {
 }
 @media (prefers-reduced-motion: reduce) {
   .wa-fab { animation: none; }
+}
+
+/* ==========================================================================
+   Eye-catching motion layer
+   (prefers-reduced-motion is neutralised by the global block above; a guard
+   at the end resets the few properties that block doesn't cover.)
+   ========================================================================== */
+
+/* Scroll-progress bar across the top */
+#scroll-progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  z-index: 1000; pointer-events: none;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--brand) 55%, transparent);
+  transition: width 0.08s linear;
+}
+
+/* Hero: drifting colour orbs */
+.hero__grid { position: relative; z-index: 1; }
+.hero__orb {
+  position: absolute; z-index: 0; border-radius: 50%; pointer-events: none;
+  filter: blur(70px); opacity: 0.55; will-change: transform;
+}
+.hero__orb--a {
+  width: 520px; height: 520px; top: -130px; right: 2%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 72%, transparent), transparent 66%);
+  animation: orb-a 18s ease-in-out infinite;
+}
+.hero__orb--b {
+  width: 460px; height: 460px; left: -150px; top: 130px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand) 60%, transparent), transparent 66%);
+  animation: orb-b 23s ease-in-out infinite;
+}
+@keyframes orb-a { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-46px,34px) scale(1.14); } }
+@keyframes orb-b { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(54px,-30px) scale(1.1); } }
+
+/* Animated shimmer on the gradient headline */
+.gradient-text {
+  background-image: linear-gradient(100deg, var(--brand) 0%, var(--accent) 42%, color-mix(in srgb, var(--accent) 45%, #cfe9c4) 55%, var(--brand) 100%);
+  background-size: 220% 100%;
+  animation: gt-shimmer 7s linear infinite;
+}
+@keyframes gt-shimmer { to { background-position: 220% 0; } }
+
+/* Primary button: sweeping shine + stronger lift/glow */
+.btn--primary { position: relative; overflow: hidden; }
+.btn--primary::after {
+  content: ""; position: absolute; top: 0; left: -130%;
+  width: 55%; height: 100%; pointer-events: none;
+  background: linear-gradient(120deg, transparent, rgb(255 255 255 / 0.45), transparent);
+  transform: skewX(-18deg); transition: left 0.7s var(--ease);
+}
+.btn--primary:hover::after { left: 150%; }
+.btn--primary:hover {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 16px 36px -12px color-mix(in srgb, var(--brand) 72%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.15);
+}
+
+/* Cards: richer lift + brand glow on hover */
+.card--hover { transition: transform 0.38s var(--ease), box-shadow 0.38s var(--ease), border-color 0.3s; }
+.card--hover:hover {
+  transform: translateY(-6px);
+  border-color: var(--brand-border);
+  box-shadow: 0 28px 52px -20px color-mix(in srgb, var(--brand) 34%, transparent), var(--shadow-lg);
+}
+
+/* Badge dot: gentle pulsing ring */
+.badge__dot { position: relative; }
+.badge__dot::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--brand) 55%, transparent);
+  animation: dot-pulse 2.4s ease-out infinite; pointer-events: none;
+}
+@keyframes dot-pulse { 0% { transform: scale(0.6); opacity: 0.8; } 100% { transform: scale(1.55); opacity: 0; } }
+
+/* Richer scroll-reveal: subtle blur + distance, with directional/scale variants */
+.js .reveal {
+  transform: translateY(26px); filter: blur(6px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease), filter 0.7s var(--ease);
+}
+.js .reveal.is-visible { filter: blur(0); }
+.js .reveal--scale { transform: translateY(26px) scale(0.96); }
+.js .reveal--left { transform: translateX(-34px); }
+.js .reveal--right { transform: translateX(34px); }
+.js .reveal--left.is-visible, .js .reveal--right.is-visible, .js .reveal--scale.is-visible { transform: none; }
+
+/* Reduced-motion guard for properties the global block doesn't reset */
+@media (prefers-reduced-motion: reduce) {
+  #scroll-progress { display: none; }
+  .js .reveal { filter: none !important; }
+  .hero__orb { animation: none !important; }
+  .gradient-text { animation: none !important; background-position: 0 0 !important; }
 }
