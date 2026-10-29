@@ -29,24 +29,24 @@
   --warning: #b45309;
   --warning-soft: #fffbeb;
 
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 26px;
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
 
-  --shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
-  --shadow-sm: 0 1px 3px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
-  --shadow: 0 6px 20px -6px rgb(15 23 42 / 0.1), 0 2px 6px -2px rgb(15 23 42 / 0.05);
-  --shadow-lg: 0 24px 48px -16px rgb(15 23 42 / 0.18), 0 8px 16px -8px rgb(15 23 42 / 0.08);
-  --shadow-brand: 0 10px 30px -10px color-mix(in srgb, var(--brand) 60%, transparent);
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 2px 10px -2px rgb(0 0 0 / 0.06);
+  --shadow: 0 10px 34px -10px rgb(0 0 0 / 0.12), 0 2px 8px -4px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 30px 64px -22px rgb(0 0 0 / 0.22), 0 8px 20px -10px rgb(0 0 0 / 0.1);
+  --shadow-brand: 0 12px 34px -12px color-mix(in srgb, var(--brand) 55%, transparent);
 
   --header-h: 72px;
   --container: 1200px;
   --gutter: clamp(16px, 4vw, 32px);
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-jakarta), var(--font-sans);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", var(--font-inter), system-ui, Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", var(--font-jakarta), sans-serif;
 }
 
 /* ==========================================================================
@@ -3603,4 +3603,61 @@ ol.checkout-steps {
 @media (prefers-reduced-motion: reduce) {
   [data-parallax] { transform: none !important; }
   #back-to-top { transition: opacity 0.2s; }
+}
+
+/* ==========================================================================
+   Apple iOS material styling — frosted glass, soft depth, springy press
+   ========================================================================== */
+
+/* Frosted-glass navigation bar (iOS style, always translucent) */
+.site-header {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.site-header.is-scrolled {
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05), 0 10px 32px -18px rgba(0, 0, 0, 0.3);
+}
+
+/* Rounder, springy buttons with an iOS press scale */
+.btn { border-radius: 14px; }
+.btn--lg { border-radius: 16px; }
+.btn--sm { border-radius: 11px; }
+.btn:active { transform: scale(0.96); }
+.btn--primary { box-shadow: var(--shadow-brand), inset 0 1px 0 rgb(255 255 255 / 0.22); }
+
+/* Frosted-glass hero badge + floating cards */
+.badge {
+  background: rgba(255, 255, 255, 0.68);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
+}
+.float-card {
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px);
+  border-radius: 18px;
+}
+
+/* iOS-rounded form controls + focus ring */
+.field input, .field textarea, .field select,
+.contact-card input, .contact-card textarea, .contact-card select,
+.searchbar input {
+  border-radius: 14px;
+}
+:focus-visible { outline-offset: 3px; border-radius: inherit; }
+
+/* Softer, glassier dark sections (frosted content cards over black) */
+.section--dark .card {
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:active { transform: none; }
 }
