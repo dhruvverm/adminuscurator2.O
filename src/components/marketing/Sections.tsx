@@ -193,7 +193,7 @@ export function ProblemSection() {
         />
         <div className="grid grid-4">
           {problems.map((p, i) => (
-            <article key={p.title} className="card card--hover problem-card reveal" style={delay(i)}>
+            <article key={p.title} className="card card--hover problem-card reveal reveal--scale" style={delay(i)}>
               <span className="num" aria-hidden="true">
                 0{i + 1}
               </span>
@@ -228,7 +228,7 @@ export function FeaturesSection({ features, id = "features", showLinks = true }:
         />
         <div className="features-grid">
           {features.map((f, i) => (
-            <article key={f.id} id={showLinks ? undefined : f.id} className="card card--hover feature-card reveal" style={delay(i % 4)}>
+            <article key={f.id} id={showLinks ? undefined : f.id} className="card card--hover feature-card reveal reveal--scale" style={delay(i % 4)}>
               <span className="icon-tile">
                 <Icon name={f.icon} size={22} />
               </span>
@@ -433,7 +433,7 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
           {testimonials.map((t, i) => {
             const initials = t.name.replace(/[[\]]/g, "").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
             return (
-              <figure key={t.id} className="card card--hover testimonial reveal" style={{ ...delay(i), margin: 0 }}>
+              <figure key={t.id} className="card card--hover testimonial reveal reveal--scale" style={{ ...delay(i), margin: 0 }}>
                 {t.isPlaceholder && <span className="placeholder-tag">Sample — not a real review</span>}
                 <Icon name="quote" size={30} className="testimonial__quote-icon" />
                 <blockquote className="testimonial__quote" style={{ margin: 0 }}>
@@ -476,7 +476,7 @@ export function UseCasesSection({ soft = true }: { soft?: boolean }) {
         />
         <div className="grid grid-4">
           {useCases.map((u, i) => (
-            <article key={u.title} className="card card--hover usecase reveal" style={delay(i)}>
+            <article key={u.title} className={`card card--hover usecase reveal ${i % 2 ? "reveal--right" : "reveal--left"}`} style={delay(i)}>
               <span className="icon-tile">
                 <Icon name={u.icon} size={22} />
               </span>
@@ -542,6 +542,8 @@ export function FinalCta() {
     <section className="section section--tight" aria-labelledby="cta-title">
       <div className="container">
         <div className="cta-panel reveal">
+          <span className="cta-orb cta-orb--a" data-parallax="0.16" aria-hidden="true" />
+          <span className="cta-orb cta-orb--b" data-parallax="-0.12" aria-hidden="true" />
           <h2 id="cta-title" className="h2">
             {finalCta.headline}
           </h2>
