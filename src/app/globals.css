@@ -3714,165 +3714,22 @@ ol.checkout-steps {
 }
 
 /* ==========================================================================
-   Liquid Glass BUTTONS — translucent frosted capsules, colours preserved
+   Button colour — cherry red (solid)
    ========================================================================== */
-
-.btn {
-  border-radius: 999px;                 /* iOS capsule shape */
-  -webkit-backdrop-filter: blur(14px) saturate(1.6);
-  backdrop-filter: blur(14px) saturate(1.6);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-}
-
-/* Primary — burgundy glass (same colour, now see-through) */
 .btn--primary {
-  background: color-mix(in srgb, var(--brand) 87%, transparent);
+  background: #d2042d;
   color: #fff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -3px 9px rgba(0, 0, 0, 0.2),
-    0 10px 28px -10px color-mix(in srgb, var(--brand) 55%, transparent);
-}
-.btn--primary:hover { background: color-mix(in srgb, var(--brand-strong) 88%, transparent); }
-
-/* Secondary — clear white glass */
-.btn--secondary {
-  background: rgba(255, 255, 255, 0.42);
-  color: var(--ink);
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 24px -12px rgba(0, 0, 0, 0.22);
-}
-.btn--secondary:hover { background: rgba(255, 255, 255, 0.62); color: var(--brand); }
-
-/* Ghost — fully clear, frosts on hover */
-.btn--ghost { background: transparent; border-color: transparent; }
-.btn--ghost:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.28); }
-
-/* Buttons used on dark sections */
-.btn--white {
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--ink);
-  border-color: rgba(255, 255, 255, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 30px -12px rgba(0, 0, 0, 0.5);
-}
-.btn--white:hover { background: rgba(255, 255, 255, 0.9); }
-.btn--outline-light {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-.btn--outline-light:hover { background: rgba(255, 255, 255, 0.18); }
-
-/* Back-to-top + mobile menu toggle as matching glass capsules */
-#back-to-top {
-  background: color-mix(in srgb, var(--brand) 82%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(1.6);
-  backdrop-filter: blur(14px) saturate(1.6);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 10px 28px -10px color-mix(in srgb, var(--brand) 50%, transparent);
-}
-#back-to-top:hover { background: color-mix(in srgb, var(--brand-strong) 85%, transparent); }
-.menu-toggle {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.45);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5);
-  backdrop-filter: blur(12px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-/* ==========================================================================
-   See-through glass buttons — faint frosted fill, strong blur, tinted labels
-   (overrides the tinted-glass block above; colours kept via label + tint)
-   ========================================================================== */
-
-.btn {
-  -webkit-backdrop-filter: blur(18px) saturate(1.8);
-  backdrop-filter: blur(18px) saturate(1.8);
-}
-
-/* Primary — see-through burgundy glass with a burgundy label (light sections) */
-.btn--primary {
-  background: linear-gradient(rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0)),
-    color-mix(in srgb, var(--brand) 20%, transparent);
-  color: var(--brand);
-  font-weight: 700;
-  border: 1px solid color-mix(in srgb, var(--brand) 42%, rgba(255, 255, 255, 0.3));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75),
-    0 10px 26px -12px color-mix(in srgb, var(--brand) 45%, transparent);
+  border-color: #d2042d;
+  box-shadow: 0 10px 26px -12px rgba(210, 4, 45, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 .btn--primary:hover {
-  background: linear-gradient(rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0)),
-    color-mix(in srgb, var(--brand) 30%, transparent);
-  color: var(--brand-strong);
+  background: #b0032a;
+  border-color: #b0032a;
 }
-.btn--primary svg { color: inherit; }
-
-/* Secondary — clear neutral glass */
-.btn--secondary {
-  background: rgba(255, 255, 255, 0.25);
-  color: var(--ink);
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 22px -12px rgba(0, 0, 0, 0.2);
-}
-.btn--secondary:hover { background: rgba(255, 255, 255, 0.42); color: var(--brand); }
-
-/* On dark sections — see-through white glass with white labels */
-.btn--white {
-  background: linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05)),
-    rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 12px 32px -14px rgba(0, 0, 0, 0.55);
-}
-.btn--white:hover { background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0.2); color: #fff; }
-.btn--white svg { color: inherit; }
-.btn--outline-light {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.38);
-}
-.btn--outline-light:hover { background: rgba(255, 255, 255, 0.16); }
-
-/* Back-to-top — see-through burgundy glass */
 #back-to-top {
-  background: linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0)),
-    color-mix(in srgb, var(--brand) 22%, transparent);
-  color: var(--brand);
-  border: 1px solid color-mix(in srgb, var(--brand) 40%, rgba(255, 255, 255, 0.3));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 26px -12px color-mix(in srgb, var(--brand) 45%, transparent);
+  background: #d2042d;
+  color: #fff;
+  border: none;
+  box-shadow: 0 10px 28px -10px rgba(210, 4, 45, 0.55);
 }
-#back-to-top:hover { background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0)), color-mix(in srgb, var(--brand) 32%, transparent); }
-
-/* ==========================================================================
-   Max see-through glass — near-clear fill so the background shows through
-   ========================================================================== */
-
-.btn {
-  -webkit-backdrop-filter: blur(10px) saturate(1.7);
-  backdrop-filter: blur(10px) saturate(1.7);
-}
-
-/* Primary — near-clear burgundy glass; label + rim carry it */
-.btn--primary {
-  background: color-mix(in srgb, var(--brand) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--brand) 40%, rgba(255, 255, 255, 0.35));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 8px 22px -14px color-mix(in srgb, var(--brand) 40%, transparent);
-}
-.btn--primary:hover { background: color-mix(in srgb, var(--brand) 20%, transparent); }
-
-/* Secondary — near-clear neutral glass */
-.btn--secondary { background: rgba(255, 255, 255, 0.12); }
-.btn--secondary:hover { background: rgba(255, 255, 255, 0.24); }
-
-/* Dark-section buttons — near-clear */
-.btn--white { background: rgba(255, 255, 255, 0.09); }
-.btn--white:hover { background: rgba(255, 255, 255, 0.17); }
-.btn--outline-light { background: rgba(255, 255, 255, 0.04); }
-.btn--outline-light:hover { background: rgba(255, 255, 255, 0.12); }
-
-/* Back-to-top */
-#back-to-top { background: color-mix(in srgb, var(--brand) 14%, transparent); }
-#back-to-top:hover { background: color-mix(in srgb, var(--brand) 22%, transparent); }
+#back-to-top:hover { background: #b0032a; }
