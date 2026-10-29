@@ -3712,3 +3712,71 @@ ol.checkout-steps {
   .ripple { display: none; }
   .btn:active { transform: none; }
 }
+
+/* ==========================================================================
+   Liquid Glass BUTTONS — translucent frosted capsules, colours preserved
+   ========================================================================== */
+
+.btn {
+  border-radius: 999px;                 /* iOS capsule shape */
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+/* Primary — burgundy glass (same colour, now see-through) */
+.btn--primary {
+  background: color-mix(in srgb, var(--brand) 87%, transparent);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -3px 9px rgba(0, 0, 0, 0.2),
+    0 10px 28px -10px color-mix(in srgb, var(--brand) 55%, transparent);
+}
+.btn--primary:hover { background: color-mix(in srgb, var(--brand-strong) 88%, transparent); }
+
+/* Secondary — clear white glass */
+.btn--secondary {
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 24px -12px rgba(0, 0, 0, 0.22);
+}
+.btn--secondary:hover { background: rgba(255, 255, 255, 0.62); color: var(--brand); }
+
+/* Ghost — fully clear, frosts on hover */
+.btn--ghost { background: transparent; border-color: transparent; }
+.btn--ghost:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.28); }
+
+/* Buttons used on dark sections */
+.btn--white {
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 30px -12px rgba(0, 0, 0, 0.5);
+}
+.btn--white:hover { background: rgba(255, 255, 255, 0.9); }
+.btn--outline-light {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.btn--outline-light:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* Back-to-top + mobile menu toggle as matching glass capsules */
+#back-to-top {
+  background: color-mix(in srgb, var(--brand) 82%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 10px 28px -10px color-mix(in srgb, var(--brand) 50%, transparent);
+}
+#back-to-top:hover { background: color-mix(in srgb, var(--brand-strong) 85%, transparent); }
+.menu-toggle {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
