@@ -4,10 +4,10 @@
    src/config/site.ts on <html>, so rebranding never requires editing CSS.
    ========================================================================== */
 :root {
-  --brand: #42634B;
-  --brand-strong: #35503C;
-  --accent: #78966D;
-  --ink: #0b1220;
+  --brand: #6D001A;
+  --brand-strong: #8A0C27;
+  --accent: #A8122E;
+  --ink: #0a0a0a;
 
   --brand-soft: color-mix(in srgb, var(--brand) 9%, #fff);
   --brand-softer: color-mix(in srgb, var(--brand) 5%, #fff);
@@ -15,13 +15,13 @@
   --gradient: linear-gradient(120deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 55%, var(--accent)) 100%);
 
   --bg: #ffffff;
-  --bg-soft: #f7f8f3;
+  --bg-soft: #f8f4f5;
   --surface: #ffffff;
-  --border: #e7e9f1;
-  --border-strong: #d7dbe7;
-  --text: #0f172a;
-  --text-muted: #525c72;
-  --text-subtle: #8690a5;
+  --border: #ece7e9;
+  --border-strong: #dbd4d7;
+  --text: #171414;
+  --text-muted: #5c5458;
+  --text-subtle: #8c8388;
   --success: #059669;
   --success-soft: #ecfdf5;
   --danger: #dc2626;
@@ -714,7 +714,7 @@ ol.checkout-steps {
   gap: 6px;
 }
 .hero__trust svg {
-  color: var(--success);
+  color: var(--brand);
 }
 .hero__visual {
   position: relative;
@@ -1518,7 +1518,7 @@ ol.checkout-steps {
   gap: 8px;
   margin-top: 14px;
   font-size: 0.875rem;
-  color: var(--success);
+  color: var(--brand);
   font-weight: 600;
 }
 .pricing-grid {
@@ -3439,7 +3439,7 @@ ol.checkout-steps {
 
 /* Animated shimmer on the gradient headline */
 .gradient-text {
-  background-image: linear-gradient(100deg, var(--brand) 0%, var(--accent) 42%, color-mix(in srgb, var(--accent) 45%, #cfe9c4) 55%, var(--brand) 100%);
+  background-image: linear-gradient(100deg, var(--brand) 0%, var(--accent) 42%, color-mix(in srgb, var(--accent) 40%, #f2b8c4) 55%, var(--brand) 100%);
   background-size: 220% 100%;
   animation: gt-shimmer 7s linear infinite;
 }

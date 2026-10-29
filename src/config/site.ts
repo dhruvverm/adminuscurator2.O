@@ -39,10 +39,10 @@ export const siteConfig = {
 
   /** Brand colors. These become CSS variables used by every component. */
   theme: {
-    primary: "#42634B", // main brand color (buttons, links, highlights)
-    primaryStrong: "#35503C", // hover / pressed state
-    accent: "#78966D", // secondary accent used sparingly in gradients & charts
-    ink: "#0b1220", // headings / dark sections
+    primary: "#6D001A", // main brand color (buttons, links, highlights)
+    primaryStrong: "#8A0C27", // hover / pressed state
+    accent: "#A8122E", // secondary accent used sparingly in gradients & charts
+    ink: "#0a0a0a", // headings / dark sections
   },
 
   /** Contact details — PLACEHOLDERS until real details are provided. */
