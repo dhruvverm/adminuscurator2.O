@@ -3714,22 +3714,22 @@ ol.checkout-steps {
 }
 
 /* ==========================================================================
-   Button colour — cherry red (solid)
+   Button colour — dark cherry red (gradient)
    ========================================================================== */
 .btn--primary {
-  background: #d2042d;
+  background: linear-gradient(135deg, #b4112b 0%, #6d0014 100%);
   color: #fff;
-  border-color: #d2042d;
-  box-shadow: 0 10px 26px -12px rgba(210, 4, 45, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  border: 1px solid #5a0011;
+  box-shadow: 0 10px 26px -12px rgba(122, 2, 24, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .btn--primary:hover {
-  background: #b0032a;
-  border-color: #b0032a;
+  background: linear-gradient(135deg, #93091f 0%, #55000f 100%);
+  border-color: #480009;
 }
 #back-to-top {
-  background: #d2042d;
+  background: linear-gradient(135deg, #b4112b 0%, #6d0014 100%);
   color: #fff;
-  border: none;
-  box-shadow: 0 10px 28px -10px rgba(210, 4, 45, 0.55);
+  border: 1px solid #5a0011;
+  box-shadow: 0 10px 28px -10px rgba(122, 2, 24, 0.6);
 }
-#back-to-top:hover { background: #b0032a; }
+#back-to-top:hover { background: linear-gradient(135deg, #93091f 0%, #55000f 100%); }
