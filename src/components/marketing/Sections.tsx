@@ -572,13 +572,15 @@ export function ContactInfo() {
           <a href={`tel:${c.phone.replace(/[^+\d]/g, "")}`}>{c.phone}</a>
         </div>
       </li>
-      <li>
-        <span className="icon-tile"><Icon name="mapPin" size={18} /></span>
-        <div>
-          <strong>Business address</strong>
-          <span>{c.address}</span>
-        </div>
-      </li>
+      {c.address && (
+        <li>
+          <span className="icon-tile"><Icon name="mapPin" size={18} /></span>
+          <div>
+            <strong>Business address</strong>
+            <span>{c.address}</span>
+          </div>
+        </li>
+      )}
       <li>
         <span className="icon-tile"><Icon name="clock" size={18} /></span>
         <div>
