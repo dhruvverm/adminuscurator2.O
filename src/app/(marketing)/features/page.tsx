@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui/Icon";
 
 export const metadata = pageMetadata({
   title: "Features",
-  description: "Dashboards, automation, analytics, collaboration, integrations and security — everything your team needs in one platform.",
+  description: "Offline billing, stock, customers, credit (udhaar), reports and backup — everything you need to run your shop, in one free app.",
   path: "/features",
 });
 
@@ -18,8 +18,8 @@ export default async function FeaturesPage() {
     <>
       <PageHero
         eyebrow="Features"
-        title="Powerful Features. Refreshingly Simple."
-        lede="Explore the tools that help your team automate routine work, stay aligned and make better decisions."
+        title="Everything your shop needs. Nothing it doesn't."
+        lede="Simple, offline tools for billing, stock, customers, udhaar and reports — all on your own device, no internet or account required."
       >
         <div className="btn-row mt-8" style={{ justifyContent: "center" }}>
           <Link href={routes.signup} className="btn btn--primary btn--lg" data-track="cta_click" data-track-label="features_hero">

@@ -4,7 +4,7 @@ import { BenefitsSection, FinalCta, HowItWorks, PageHero, TestimonialsSection, U
 
 export const metadata = pageMetadata({
   title: "Solutions",
-  description: "See how startups, small businesses, growing teams and enterprises use the platform to simplify their work.",
+  description: "See how optical shops, clothing and retail stores, service businesses and busy counters use Adminuscurator to run their day.",
   path: "/solutions",
 });
 
@@ -14,8 +14,8 @@ export default async function SolutionsPage() {
     <>
       <PageHero
         eyebrow="Solutions"
-        title="One Platform. Built Around the Way You Work."
-        lede="From first hire to enterprise scale, give every team the tools to move faster with less busywork."
+        title="One app, built around your kind of shop."
+        lede="Optical, retail, services or point-of-sale — choose the edition made for your business and start billing offline in minutes."
       />
       <UseCasesSection soft={false} />
       <BenefitsSection />

@@ -7,60 +7,60 @@ import type { Faq, Feature, ManagedContent, Plan, Product, Software, Testimonial
 
 export const defaultFeatures: Feature[] = [
   {
-    id: "dashboard",
-    icon: "dashboard",
-    title: "Smart Dashboard",
-    description: "Get a clear overview of your most important information from one place.",
-    href: "/features#dashboard",
+    id: "billing",
+    icon: "fileText",
+    title: "Offline Billing & Invoices",
+    description: "Create bills and instant invoices in seconds — print to thermal (58/80 mm) or A5, or share on WhatsApp.",
+    href: "/features#billing",
   },
   {
-    id: "automation",
-    icon: "zap",
-    title: "Automation",
-    description: "Automate repetitive tasks and save valuable time.",
-    href: "/features#automation",
+    id: "stock",
+    icon: "layers",
+    title: "Stock & Inventory",
+    description: "Track products and quantities with low-stock alerts, and bulk-import your inventory from Excel or CSV.",
+    href: "/features#stock",
   },
   {
-    id: "analytics",
-    icon: "barChart",
-    title: "Analytics & Reports",
-    description: "Turn your data into clear, actionable insights.",
-    href: "/features#analytics",
-  },
-  {
-    id: "collaboration",
+    id: "customers",
     icon: "users",
-    title: "Team Collaboration",
-    description: "Keep your team aligned and productive.",
-    href: "/features#collaboration",
+    title: "Customers & Udhaar",
+    description: "Keep customer records and track credit (udhaar) so you always know who owes what.",
+    href: "/features#customers",
   },
   {
-    id: "security",
+    id: "reports",
+    icon: "chart",
+    title: "Sales & Profit Reports",
+    description: "See daily sales, collections, expenses and profit — clear reports with no spreadsheets.",
+    href: "/features#reports",
+  },
+  {
+    id: "offline",
     icon: "shield",
-    title: "Security",
-    description: "Protect your business data with secure, reliable infrastructure.",
-    href: "/features#security",
+    title: "Works 100% Offline",
+    description: "No internet or account needed — the whole app runs on your own device, and your data stays there.",
+    href: "/features#offline",
   },
   {
-    id: "integrations",
-    icon: "plug",
-    title: "Integrations",
-    description: "Connect your workflow with the tools you already use.",
-    href: "/features#integrations",
+    id: "backup",
+    icon: "refresh",
+    title: "Backup & Restore",
+    description: "Save a backup file any time and restore it when you change or reset your device.",
+    href: "/features#backup",
   },
   {
-    id: "notifications",
-    icon: "bell",
-    title: "Notifications",
-    description: "Stay informed about important activities and updates.",
-    href: "/features#notifications",
+    id: "pos",
+    icon: "zap",
+    title: "Fast Point-of-Sale",
+    description: "Tap or scan products into a cart and take payment in seconds at a busy counter.",
+    href: "/features#pos",
   },
   {
-    id: "customization",
-    icon: "sliders",
-    title: "Customization",
-    description: "Configure the software around your business needs.",
-    href: "/features#customization",
+    id: "editions",
+    icon: "store",
+    title: "Four Shop Editions",
+    description: "Optical, Retail, Services and POS — choose the edition built for your kind of shop.",
+    href: "/features#editions",
   },
 ];
 
@@ -134,35 +134,9 @@ export const defaultPlans: Plan[] = [
  * labelled as samples on the site until replaced (set isPlaceholder: false
  * only for genuine, approved quotes).
  */
-export const defaultTestimonials: Testimonial[] = [
-  {
-    id: "t1",
-    quote:
-      "This software has completely changed how our team manages its daily workflow. We save hours every week.",
-    name: "[Customer Name]",
-    role: "[Job Title]",
-    company: "[Company]",
-    isPlaceholder: true,
-  },
-  {
-    id: "t2",
-    quote:
-      "Everything we need is finally in one place. Onboarding the team took an afternoon, not a month.",
-    name: "[Customer Name]",
-    role: "[Job Title]",
-    company: "[Company]",
-    isPlaceholder: true,
-  },
-  {
-    id: "t3",
-    quote:
-      "The reporting gives us the visibility we were missing. Decisions that used to take days now take minutes.",
-    name: "[Customer Name]",
-    role: "[Job Title]",
-    company: "[Company]",
-    isPlaceholder: true,
-  },
-];
+// No sample/fake reviews are shown. Add genuine, approved customer quotes here
+// (with isPlaceholder: false) and the "What our customers say" section will appear.
+export const defaultTestimonials: Testimonial[] = [];
 
 export const defaultFaqs: Faq[] = [
   {
@@ -218,8 +192,8 @@ export const defaultFaqs: Faq[] = [
 export const defaultProducts: Product[] = [
   {
     id: "platform",
-    name: "Adminuscurator Platform",
-    summary: "The core workspace: dashboards, automation, analytics and collaboration. [Replace with your product.]",
+    name: "Adminuscurator",
+    summary: "Offline billing, inventory, customers, credit (udhaar), expenses and reports — in free apps for Android, Windows and Mac.",
     status: "active",
   },
 ];

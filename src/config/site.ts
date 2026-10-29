@@ -18,10 +18,10 @@ export const siteConfig = {
   /** Company / product name used across the site, SEO and emails. */
   name: "Adminuscurator",
   /** Legal entity name, used in the footer and legal pages. */
-  legalName: "[Company Legal Name]",
-  tagline: "Powerful Software for Modern Businesses",
+  legalName: "Adminuscurator",
+  tagline: "Offline billing, stock & accounts for every shop",
   description:
-    "Discover Adminuscurator, powerful software designed to simplify workflows, automate tasks, and help businesses work smarter.",
+    "Adminuscurator is free, offline shop-management software — billing, inventory, customers, credit (udhaar), expenses and reports for optical, retail, service and point-of-sale shops. Works on Android, Windows and Mac with no account and no monthly fees; your data stays on your device.",
 
   /** Public URL — set NEXT_PUBLIC_SITE_URL in the environment. */
   url: (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, ""),
@@ -52,7 +52,7 @@ export const siteConfig = {
     supportEmail: "adminuscurator@gmail.com",
     phone: "+91 82876 14772",
     address: "",
-    hours: "Monday – Friday, 9:00 AM – 6:00 PM [Time Zone]",
+    hours: "",
     /**
      * WhatsApp number in full international format, digits only (e.g.
      * "919876543210"). Leave empty to hide the floating WhatsApp button.
@@ -82,7 +82,7 @@ export const siteConfig = {
 
   seo: {
     titleTemplate: "%s — Adminuscurator",
-    defaultTitle: "Adminuscurator — Powerful Software for Modern Businesses",
+    defaultTitle: "Adminuscurator — Offline Shop Software (Billing, Stock & Accounts)",
     twitterHandle: "", // e.g. "@yourbrand"
     locale: "en_US",
   },

@@ -4,7 +4,6 @@ import { about } from "@/content/marketing";
 import { pageMetadata } from "@/lib/seo";
 import { FinalCta, PageHero, SectionHead, TrustSection } from "@/components/marketing/Sections";
 import { Icon } from "@/components/ui/Icon";
-import { PlaceholderTag } from "@/components/ui/PlaceholderTag";
 
 export const metadata = pageMetadata({
   title: "About",
@@ -15,11 +14,7 @@ export const metadata = pageMetadata({
 export default function AboutPage() {
   return (
     <>
-      <PageHero eyebrow="About us" title={about.headline} lede={about.intro}>
-        <p className="mt-4">
-          <PlaceholderTag label="Company story is placeholder text" />
-        </p>
-      </PageHero>
+      <PageHero eyebrow="About us" title={about.headline} lede={about.intro} />
 
       <section className="section section--tight">
         <div className="container container--narrow">
@@ -53,11 +48,11 @@ export default function AboutPage() {
 
       <section className="section section--tight">
         <div className="container center reveal">
-          <h2 className="h2">Want to work with us?</h2>
-          <p className="lede">We&apos;re always interested in hearing from customers, partners and future teammates.</p>
+          <h2 className="h2">Have a question?</h2>
+          <p className="lede">We&apos;d love to hear from shopkeepers and partners — reach us any time on WhatsApp.</p>
           <div className="btn-row mt-8" style={{ justifyContent: "center" }}>
             <Link href="/contact" className="btn btn--primary btn--lg">Contact us</Link>
-            <Link href="/resources/careers" className="btn btn--secondary btn--lg">View careers</Link>
+            <Link href="/downloads" className="btn btn--secondary btn--lg">Download free</Link>
           </div>
         </div>
       </section>

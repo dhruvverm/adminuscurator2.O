@@ -101,7 +101,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="app-header" style={{ marginBottom: 16 }}>
           <div>
             <h2 className="h3">Your workspace</h2>
-            <p>[Connect your application here — this preview stands in for the product UI.]</p>
+            <p>This is a preview. The full Adminuscurator apps run offline on your own device — download them from the Downloads page.</p>
           </div>
         </div>
         <DashboardMockup />

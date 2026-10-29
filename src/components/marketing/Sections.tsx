@@ -420,6 +420,7 @@ export function SecuritySection() {
 
 /* ── Testimonials ─────────────────────────────────────────── */
 export function TestimonialsSection({ testimonials }: { testimonials: Testimonial[] }) {
+  if (!testimonials.length) return null;
   const anyPlaceholder = testimonials.some((t) => t.isPlaceholder);
   return (
     <section className="section" aria-labelledby="testimonials-title">
@@ -590,13 +591,15 @@ export function ContactInfo() {
           </div>
         </li>
       )}
-      <li>
-        <span className="icon-tile"><Icon name="clock" size={18} /></span>
-        <div>
-          <strong>Business hours</strong>
-          <span>{c.hours}</span>
-        </div>
-      </li>
+      {c.hours && (
+        <li>
+          <span className="icon-tile"><Icon name="clock" size={18} /></span>
+          <div>
+            <strong>Business hours</strong>
+            <span>{c.hours}</span>
+          </div>
+        </li>
+      )}
     </ul>
   );
 }
