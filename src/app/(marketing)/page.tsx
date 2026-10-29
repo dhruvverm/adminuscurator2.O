@@ -17,6 +17,7 @@ import {
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { ContactSection } from "@/components/marketing/ContactSection";
 import { ShowcaseSection } from "@/components/marketing/ShowcaseSection";
+import { Marquee } from "@/components/marketing/Marquee";
 
 // SEO — edit the homepage title/description here.
 export const metadata = pageMetadata({
@@ -51,6 +52,7 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(softwareLd)} />
       <Hero />
+      <Marquee />
       <TrustSection />
       <ProblemSection />
       <FeaturesSection features={features} />

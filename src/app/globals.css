@@ -3494,3 +3494,78 @@ ol.checkout-steps {
   .hero__orb { animation: none !important; }
   .gradient-text { animation: none !important; background-position: 0 0 !important; }
 }
+
+/* ==========================================================================
+   Interactive flair (spotlight / tilt / magnetic / marquee / rotator)
+   Classes .spotlight/.tilt/.magnetic are added by Interactions.tsx only on
+   fine-pointer, non-reduced-motion devices, so touch users get none of it.
+   ========================================================================== */
+
+/* Cursor spotlight on cards */
+.card--hover.spotlight { isolation: isolate; }
+.card--hover.spotlight::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: 0;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--brand) 18%, transparent), transparent 62%);
+  opacity: 0; transition: opacity 0.35s; pointer-events: none;
+}
+.card--hover.spotlight:hover::before { opacity: 1; }
+.card--hover.spotlight > * { position: relative; z-index: 1; }
+
+/* 3D tilt on the hero mockup */
+.hero__visual.tilt {
+  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) !important;
+  transform-style: preserve-3d;
+  transition: transform 0.25s var(--ease);
+  will-change: transform;
+}
+
+/* Magnetic buttons */
+.btn.magnetic { transition: transform 0.18s var(--ease), box-shadow 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s; }
+.btn.magnetic,
+.btn.magnetic:hover,
+.btn--primary.magnetic:hover,
+.btn--secondary.magnetic:hover {
+  transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--mscale, 1));
+}
+.btn.magnetic:hover { --mscale: 1.04; }
+
+/* Infinite marquee ticker */
+.marquee {
+  overflow: hidden;
+  border-block: 1px solid var(--border);
+  background: color-mix(in srgb, var(--brand) 5%, #fff);
+}
+.marquee__track { display: flex; width: max-content; animation: marquee 34s linear infinite; }
+.marquee:hover .marquee__track { animation-play-state: paused; }
+.marquee__item {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 15px 30px; white-space: nowrap;
+  font-weight: 650; font-size: 0.95rem; color: var(--text);
+}
+.marquee__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex: none; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+/* Hero rotating-word line */
+.hero__for { margin-top: 14px; font-size: 1rem; font-weight: 600; color: var(--text-muted); }
+.rotator { position: relative; display: inline-block; vertical-align: bottom; }
+.rotator__sizer { visibility: hidden; font-weight: 800; }
+.rotator__word {
+  position: absolute; left: 0; bottom: 0; white-space: nowrap;
+  color: var(--brand); font-weight: 800;
+  opacity: 0; transform: translateY(100%) rotateX(-90deg); transform-origin: bottom center;
+  transition: transform 0.55s var(--ease), opacity 0.55s var(--ease);
+}
+.rotator__word.is-active { opacity: 1; transform: translateY(0) rotateX(0); }
+
+/* Glassy header once scrolled */
+.site-header.is-scrolled {
+  background: color-mix(in srgb, #fff 80%, transparent);
+  backdrop-filter: saturate(1.5) blur(12px);
+  -webkit-backdrop-filter: saturate(1.5) blur(12px);
+  box-shadow: 0 4px 24px -12px color-mix(in srgb, var(--brand) 40%, transparent), var(--shadow-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track { animation: none !important; }
+  .rotator__word { transition: none !important; }
+}

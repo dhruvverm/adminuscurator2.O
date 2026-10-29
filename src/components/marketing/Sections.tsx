@@ -16,6 +16,7 @@ import { comparisonRows, type Cell } from "@/content/comparison";
 import type { Faq, Feature, Plan, Testimonial } from "@/content/types";
 import { Icon } from "@/components/ui/Icon";
 import { Counter } from "@/components/ui/Counter";
+import { RotatingWords } from "@/components/ui/RotatingWords";
 import { PlaceholderTag } from "@/components/ui/PlaceholderTag";
 import { DashboardMockup } from "@/components/mockups/Mockups";
 
@@ -92,6 +93,10 @@ export function Hero() {
                 {t}
               </span>
             ))}
+          </p>
+          <p className="hero__for hero-in" style={delay(5)}>
+            Built for{" "}
+            <RotatingWords words={["opticians", "retailers", "restaurants", "salons", "service shops", "any counter"]} />
           </p>
         </div>
 

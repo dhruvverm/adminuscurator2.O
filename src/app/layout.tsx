@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { siteConfig } from "@/config/site";
 import { jsonLd } from "@/lib/seo";
 import { RevealObserver } from "@/components/ui/RevealObserver";
+import { Interactions } from "@/components/ui/Interactions";
 import { CookieConsent } from "@/components/layout/CookieConsent";
 import "./globals.css";
 
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <RevealObserver />
+        <Interactions />
         <CookieConsent />
       </body>
     </html>
