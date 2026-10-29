@@ -3504,12 +3504,11 @@ ol.checkout-steps {
 /* Cursor spotlight on cards */
 .card--hover.spotlight { isolation: isolate; }
 .card--hover.spotlight::before {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: 0;
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1;
   background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--brand) 18%, transparent), transparent 62%);
   opacity: 0; transition: opacity 0.35s; pointer-events: none;
 }
 .card--hover.spotlight:hover::before { opacity: 1; }
-.card--hover.spotlight > * { position: relative; z-index: 1; }
 
 /* 3D tilt on the hero mockup */
 .hero__visual.tilt {
