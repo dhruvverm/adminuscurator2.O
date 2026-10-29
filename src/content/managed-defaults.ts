@@ -229,10 +229,10 @@ export const defaultProducts: Product[] = [
  * and link them as "/files/…", or use store URLs. Leave a platform's URL
  * empty when it isn't available — that option is then disabled.
  */
-const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.9";
-const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.6";
-const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.6";
-const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.13";
+const RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-v1.25.10";
+const RETAIL_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-retail-v1.25.7";
+const SERVICES_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-services-v1.25.7";
+const POS_RELEASE = "https://github.com/dhruvverm/adminuscurator2.O/releases/download/adminuscurator-pos-v1.25.14";
 
 export const defaultSoftware: Software[] = [
   {
@@ -242,16 +242,16 @@ export const defaultSoftware: Software[] = [
       "A fast, offline point-of-sale for any shop or counter: tap or scan products into a cart and take payment in seconds. Bulk-upload your inventory from an Excel (.xlsx) or CSV file. An optional restaurant/tables mode holds a separate order per table. Add your own WhatsApp API to auto-send bills and run campaigns, with a Swiggy/Zomato order inbox tagged by channel. Includes inventory, billing, customers, credit, expenses, reports and backup. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "store",
-    version: "1.25.13",
+    version: "1.25.14",
     releaseDate: "2026-10-06",
     mobileUrl: "/files/Adminuscurator-POS-1.25.11.apk",
     mobileSize: "204 KB",
     tabletUrl: "/files/Adminuscurator-POS-1.25.11.apk",
     tabletSize: "204 KB",
     // Desktop installers — built by .github/workflows/pos-desktop.yml
-    windowsUrl: `${POS_RELEASE}/AdminuscuratorPOS-Setup-1.25.13.exe`,
+    windowsUrl: `${POS_RELEASE}/AdminuscuratorPOS-Setup-1.25.14.exe`,
     windowsSize: "106 MB",
-    macUrl: `${POS_RELEASE}/AdminuscuratorPOS-1.25.13-mac.dmg`,
+    macUrl: `${POS_RELEASE}/AdminuscuratorPOS-1.25.14-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
@@ -263,7 +263,7 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for optical shops: customers, prescriptions, stock, billing, credit, expenses and reports. Installs as an app on Android, Windows and Mac; no internet or account needed, and your data stays on your device.",
     logo: "/brand/app-icon.svg",
     icon: "eye",
-    version: "1.25.9",
+    version: "1.25.10",
     releaseDate: "2026-10-28",
     // Android app (APK) for phones and tablets — served from this site
     mobileUrl: "/files/Adminuscurator-1.25.4.apk",
@@ -271,9 +271,9 @@ export const defaultSoftware: Software[] = [
     tabletUrl: "/files/Adminuscurator-1.25.4.apk",
     tabletSize: "200 KB",
     // Desktop installers — built by .github/workflows/optical-shop-desktop.yml
-    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.9.exe`,
+    windowsUrl: `${RELEASE}/Adminuscurator-Setup-1.25.10.exe`,
     windowsSize: "106 MB",
-    macUrl: `${RELEASE}/Adminuscurator-1.25.9-mac.dmg`,
+    macUrl: `${RELEASE}/Adminuscurator-1.25.10-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
@@ -285,16 +285,16 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for clothing shops: products with size & colour variants, per-variant stock and low-stock alerts, billing, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "store",
-    version: "1.25.6",
+    version: "1.25.7",
     releaseDate: "2026-10-25",
     mobileUrl: "/files/Adminuscurator-Retail-1.25.4.apk",
     mobileSize: "184 KB",
     tabletUrl: "/files/Adminuscurator-Retail-1.25.4.apk",
     tabletSize: "184 KB",
     // Desktop installers — built by .github/workflows/retail-desktop.yml
-    windowsUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-Setup-1.25.6.exe`,
+    windowsUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-Setup-1.25.7.exe`,
     windowsSize: "106 MB",
-    macUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-1.25.6-mac.dmg`,
+    macUrl: `${RETAIL_RELEASE}/AdminuscuratorRetail-1.25.7-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
@@ -306,16 +306,16 @@ export const defaultSoftware: Software[] = [
       "Offline management and accounting for service businesses: a service price list, appointments/booking, recurring billing, GST invoices, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "fileText",
-    version: "1.25.6",
+    version: "1.25.7",
     releaseDate: "2026-10-25",
     mobileUrl: "/files/Adminuscurator-Services-1.25.4.apk",
     mobileSize: "188 KB",
     tabletUrl: "/files/Adminuscurator-Services-1.25.4.apk",
     tabletSize: "188 KB",
     // Desktop installers — built by .github/workflows/services-desktop.yml
-    windowsUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-Setup-1.25.6.exe`,
+    windowsUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-Setup-1.25.7.exe`,
     windowsSize: "106 MB",
-    macUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-1.25.6-mac.dmg`,
+    macUrl: `${SERVICES_RELEASE}/AdminuscuratorServices-1.25.7-mac.dmg`,
     macSize: "218 MB",
     license: "Free to download and use",
     isPlaceholder: false,
