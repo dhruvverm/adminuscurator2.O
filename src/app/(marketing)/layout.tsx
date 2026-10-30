@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
+import { DiwaliBar } from "@/components/layout/DiwaliBar";
 import { Logo } from "@/components/ui/Logo";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -9,6 +10,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <a href="#main" className="skip-link">
         Skip to content
       </a>
+      <DiwaliBar />
       <Header logo={<Logo />} />
       <main id="main">{children}</main>
       <Footer />

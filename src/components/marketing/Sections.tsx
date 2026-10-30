@@ -55,6 +55,16 @@ export function Hero() {
       <div className="hero__bg" aria-hidden="true" />
       <span className="hero__orb hero__orb--a" aria-hidden="true" />
       <span className="hero__orb hero__orb--b" aria-hidden="true" />
+      <div className="diwali-lights" aria-hidden="true">
+        {Array.from({ length: 18 }).map((_, i) => (
+          <span key={i} />
+        ))}
+      </div>
+      <div className="diwali-sparkles" aria-hidden="true">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span key={i} />
+        ))}
+      </div>
       <div className="container hero__grid">
         <div className="hero__copy">
           <span className="badge hero-in">
