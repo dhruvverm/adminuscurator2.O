@@ -2310,6 +2310,52 @@ ol.checkout-steps {
 .footer-col button:hover {
   color: var(--brand);
 }
+/* trust badges: Built in India, Registered MSME (Udyam number) */
+.footer-trust {
+  margin-top: 44px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.trust-flag {
+  flex: 0 0 auto;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.trust-icon {
+  display: grid;
+  place-items: center;
+  color: var(--success);
+  flex: 0 0 auto;
+}
+.trust-title {
+  display: block;
+  font-weight: 650;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.trust-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.footer-trust + .footer-bottom {
+  margin-top: 28px;
+}
 .footer-bottom {
   margin-top: 56px;
   padding-top: 24px;

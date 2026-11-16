@@ -43,6 +43,30 @@ export function Footer() {
           ))}
         </div>
 
+        <ul className="footer-trust" aria-label="About this business">
+          <li className="trust-badge">
+            <svg className="trust-flag" viewBox="0 0 30 20" width="30" height="20" aria-hidden="true">
+              <rect width="30" height="20" rx="2.5" fill="#fff" />
+              <path d="M0 2.5A2.5 2.5 0 0 1 2.5 0h25A2.5 2.5 0 0 1 30 2.5v4.17H0Z" fill="#FF9933" />
+              <path d="M0 13.33h30v4.17a2.5 2.5 0 0 1-2.5 2.5h-25A2.5 2.5 0 0 1 0 17.5Z" fill="#138808" />
+              <circle cx="15" cy="10" r="2.4" fill="none" stroke="#000080" strokeWidth="0.7" />
+              <circle cx="15" cy="10" r="0.5" fill="#000080" />
+            </svg>
+            <span className="trust-title">Built in India</span>
+          </li>
+          {siteConfig.udyamNumber && (
+            <li className="trust-badge">
+              <span className="trust-icon">
+                <Icon name="shield" size={20} />
+              </span>
+              <span>
+                <span className="trust-title">Registered MSME</span>
+                <span className="trust-sub">{siteConfig.udyamNumber}</span>
+              </span>
+            </li>
+          )}
+        </ul>
+
         <div className="footer-bottom">
           <p>
             © {siteConfig.copyrightYear} {siteConfig.name}. All rights reserved.

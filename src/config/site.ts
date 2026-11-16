@@ -19,6 +19,8 @@ export const siteConfig = {
   name: "Adminuscurator",
   /** Legal entity name, used in the footer and legal pages. */
   legalName: "Adminuscurator",
+  /** Udyam (MSME) registration number, shown in the footer. Leave empty to hide the badge. */
+  udyamNumber: "UDYAM-DL-11-0177776",
   tagline: "Offline billing, stock & accounts for every shop",
   description:
     "Adminuscurator is free, offline shop-management software — billing, inventory, customers, credit (udhaar), expenses and reports for optical, retail, service and point-of-sale shops. Works on Android, Windows and Mac with no account and no monthly fees; your data stays on your device.",
