@@ -167,7 +167,7 @@ export const defaultFaqs: Faq[] = [
     id: "billing",
     question: "Can I create bills and manage inventory?",
     answer:
-      "Yes. Create bills and share them on WhatsApp or print to thermal (58/80 mm) and A5 printers, and manage products and stock with low-stock alerts. The POS edition can also bulk-import inventory from Excel (.xlsx) and CSV. Note: Adminuscurator does not provide GST billing.",
+      "Yes. Create bills and share them on WhatsApp or print to thermal (58/80 mm) and A5 printers, and manage products and stock with low-stock alerts. The POS edition can also bulk-import inventory from Excel (.xlsx) and CSV.",
   },
   {
     id: "udhaar",
@@ -277,7 +277,7 @@ export const defaultSoftware: Software[] = [
     id: "adminuscurator-services",
     name: "Adminuscurator Services",
     description:
-      "Offline management and accounting for service businesses: a service price list, appointments/booking, recurring billing, GST invoices, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
+      "Offline management and accounting for service businesses: a service price list, appointments/booking, recurring billing, invoices, credit, customers, expenses and reports. Works on Android, Windows and Mac — no internet or account needed.",
     logo: "/brand/app-icon.svg",
     icon: "fileText",
     version: "1.25.8",
