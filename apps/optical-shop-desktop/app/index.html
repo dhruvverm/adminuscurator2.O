@@ -10267,18 +10267,40 @@ var prod = i.productId ? M.find('products', i.productId) : null;
   App.paymentForm = function (opts) {
     opts = opts || {};
 
+    /* the bill this payment was opened from (the Receive button on a bill) */
+    var fromBill = opts.saleId ? M.find('sales', opts.saleId) : null;
+    function billDue(s) { return App.round2(App.n(s.total) - M.salePaid(s.id)); }
+    /* Order Forum bills (and walk-in bills) are not part of the customer's account, so money
+       for them must go on the bill itself — never into the customer's general balance. */
+    function ownBill(s) { return !!s && (s.orderbook || !s.customerId); }
+
     function open(customer) {
       var stats = customer ? M.customerStats(customer.id) : null;
       var dues = customer ? M.customerSales(customer.id).filter(function (s) {
-        return s.status !== 'cancelled' && App.round2(s.total - M.salePaid(s.id)) > 0.5;
+        return s.status !== 'cancelled' && billDue(s) > 0.5;
       }) : [];
+      /* open Order Forum bills of this customer, so a balance paid later can be put on the order */
+      var orders = customer ? M.sales().filter(function (s) {
+        return s.orderbook && s.customerId === customer.id && s.status !== 'cancelled' && billDue(s) > 0.5;
+      }) : [];
+      if (fromBill && fromBill.status !== 'cancelled' && fromBill.customerId === (customer ? customer.id : '') &&
+          !dues.concat(orders).some(function (s) { return s.id === fromBill.id; })) {
+        (fromBill.orderbook ? orders : dues).push(fromBill);
+      }
 
-      var saleOpts = [{ v: '', l: '— oldest dues first (general) —' }].concat(dues.map(function (s) {
-        return { v: s.id, l: s.invoiceNo + ' — due ' + App.money(App.round2(s.total - M.salePaid(s.id))) };
+      var saleOpts = (customer ? [{ v: '', l: '— oldest dues first (general) —' }] : []).concat(dues.map(function (s) {
+        return { v: s.id, l: s.invoiceNo + ' — due ' + App.money(billDue(s)) };
+      })).concat(orders.map(function (s) {
+        return { v: s.id, l: 'Order ' + s.invoiceNo + ' — due ' + App.money(billDue(s)) };
       }));
+      var startBill = fromBill && saleOpts.some(function (o) { return o.v === fromBill.id; }) ? fromBill : null;
 
       var body =
-        (customer ?
+        ((!customer && startBill) ?
+          '<div class="banner">' + App.icon('receipt', 20) + '<div class="tx">' +
+          (startBill.orderbook ? 'Order ' : 'Bill ') + App.esc(startBill.invoiceNo) + ' — ' + App.esc(startBill.customerName || 'Walk-in customer') +
+          '<small>Due ' + App.money(billDue(startBill)) + ' · this payment goes on this bill only</small></div></div>' :
+        customer ?
           '<div class="banner ' + (stats.outstanding > 0.5 ? 'warn' : 'ok') + '">' + App.icon('user', 20) + '' +
           '<div class="tx">' + App.esc(customer.name) + ' — ' +
           (stats.outstanding > 0.5 ? 'Due <b>' + App.money(stats.outstanding) + '</b>' : 'Account is settled') +
@@ -10292,10 +10314,10 @@ var prod = i.productId ? M.find('products', i.productId) : null;
             attrs: 'inputmode="decimal" step="0.01" min="0"' },
           { k: 'method', label: 'Received via', type: 'select', options: M.PAY_METHODS.filter(function (m) { return m !== 'Credit'; }), value: 'Cash' },
           { k: 'date', label: 'Date', type: 'date', value: App.today() },
-          { k: 'saleId', label: 'Against which bill', type: 'select', options: saleOpts, value: opts.saleId || '' },
+          { k: 'saleId', label: 'Against which bill', type: 'select', options: saleOpts, value: startBill ? startBill.id : '' },
           { k: 'note', label: 'Note (optional)', value: '', span: 2 }
         ]) +
-        (customer && stats.outstanding > 0.5 ?
+        (customer && stats.outstanding > 0.5 && !ownBill(startBill) ?
           '<div class="chips mt12">' +
             '<button class="chip" data-amt="' + stats.outstanding + '">Full ' + App.money(stats.outstanding) + '</button>' +
             '<button class="chip" data-amt="' + App.round2(stats.outstanding / 2) + '">Half</button>' +
@@ -10312,9 +10334,13 @@ var prod = i.productId ? M.find('products', i.productId) : null;
               var d = UI.readForm(a.el);
               var amt = App.n(d.amount);
               if (amt <= 0) return UI.markError(a.el, 'amount', 'Enter an amount');
-              if (!customer) { App.toast('Choose a customer first', 'err'); return; }
+              var bill = d.saleId ? M.find('sales', d.saleId) : null;
+              if (!customer && !bill) { App.toast('Choose a customer first', 'err'); return; }
+              if (ownBill(bill) && amt > billDue(bill) + 0.004) {
+                return UI.markError(a.el, 'amount', 'This ' + (bill.orderbook ? 'order' : 'bill') + ' has only ' + App.money(billDue(bill)) + ' due');
+              }
               try {
-                M.paymentCreate({ customerId: customer.id, saleId: d.saleId, date: d.date, amount: amt, method: d.method, note: d.note });
+                M.paymentCreate({ customerId: customer ? customer.id : (bill.customerId || ''), saleId: d.saleId, date: d.date, amount: amt, method: d.method, note: d.note });
                 a.close();
                 App.toast(App.money(amt) + ' payment recorded', 'ok');
                 UI.render();
@@ -10325,14 +10351,19 @@ var prod = i.productId ? M.find('products', i.productId) : null;
 
       function preview() {
         var el = App.el('#pfafter', m.el);
-        if (!el || !customer) return;
+        if (!el) return;
+        var sel = App.el('[name="saleId"]', m.el);
+        var bill = sel && sel.value ? M.find('sales', sel.value) : null;
+        var own = ownBill(bill);
+        if (!customer && !own) { el.innerHTML = ''; return; }
+        var base = own ? billDue(bill) : stats.outstanding;     /* an order's balance, not the customer account */
         var amt = App.n(App.el('[name="amount"]', m.el).value);
-        var after = App.round2(stats.outstanding - amt);
+        var after = App.round2(base - amt);
         el.innerHTML = '<div class="totals" style="max-width:none">' +
-          '<div class="r"><span class="muted">Currently due</span><span class="num">' + App.money(stats.outstanding) + '</span></div>' +
+          '<div class="r"><span class="muted">' + (own ? (bill.orderbook ? 'Due on order ' : 'Due on bill ') + App.esc(bill.invoiceNo) : 'Currently due') + '</span><span class="num">' + App.money(base) + '</span></div>' +
           '<div class="r"><span class="muted">This payment</span><span class="num pos">− ' + App.money(amt) + '</span></div>' +
           '<div class="r big"><span>Due after this</span><span class="num ' + (after > 0.5 ? 'neg' : 'pos') + '">' + App.money(after) + '</span></div>' +
-          (after < -0.5 ? '<div class="tiny dim right">(will be kept as an advance)</div>' : '') +
+          (after < -0.5 ? '<div class="tiny dim right">' + (own ? '(more than the balance)' : '(will be kept as an advance)') + '</div>' : '') +
           '</div>';
       }
       App.el('[name="amount"]', m.el).addEventListener('input', preview);
@@ -10342,10 +10373,8 @@ var prod = i.productId ? M.find('products', i.productId) : null;
       });
       App.on(m.el, 'change', '[name="saleId"]', function () {
         var s = M.find('sales', this.value);
-        if (s) {
-          App.el('[name="amount"]', m.el).value = App.round2(s.total - M.salePaid(s.id));
-          preview();
-        }
+        if (s) App.el('[name="amount"]', m.el).value = billDue(s);
+        preview();
       });
       var chg = App.el('#pfchange', m.el);
       if (chg) chg.addEventListener('click', function () {
@@ -10356,6 +10385,7 @@ var prod = i.productId ? M.find('products', i.productId) : null;
     }
 
     if (opts.customerId) open(M.find('customers', opts.customerId));
+    else if (fromBill && !fromBill.customerId) open(null);     /* walk-in bill: pay it directly */
     else UI.pickCustomer(function (c) { if (c) open(c); }, { allowWalkIn: false });
   };
 })();
