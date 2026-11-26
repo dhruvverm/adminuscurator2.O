@@ -11,6 +11,8 @@ export interface SimplePage {
   title: string;
   description: string;
   updated?: string;
+  /** Keep out of Google (and the sitemap) until the page has real content. */
+  noIndex?: boolean;
   sections: { heading: string; body: string[] }[];
 }
 
@@ -191,6 +193,7 @@ export const resourcePages: SimplePage[] = [
   },
   {
     slug: "blog",
+    noIndex: true,
     title: "Blog",
     description: "Tips for running your shop.",
     sections: [

@@ -8,8 +8,8 @@ export function ShowcaseSection() {
       <div className="container">
         <SectionHead
           eyebrow="Product tour"
-          title={<span id="showcase-title">See the Platform in Action</span>}
-          lede="One workspace for your dashboards, analytics, automation and reports."
+          title={<span id="showcase-title">See Adminuscurator in Action</span>}
+          lede="Your day's sales, stock, dues and reports — all on one screen."
         />
         <Showcase
           panels={{

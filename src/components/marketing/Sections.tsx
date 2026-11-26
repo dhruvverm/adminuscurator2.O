@@ -139,7 +139,7 @@ export function TrustSection() {
     <section className="section section--tight" aria-labelledby="trust-title">
       <div className="container">
         <h2 id="trust-title" className="h3 center reveal" style={{ fontSize: "1.25rem", marginBottom: 28 }}>
-          Built to Make Your Work Simpler
+          Made for India&apos;s everyday shops
         </h2>
         <ul className="stats reveal">
           {stats.map((s) => (
@@ -188,8 +188,8 @@ export function ProblemSection() {
       <div className="container">
         <SectionHead
           eyebrow="The problem"
-          title={<span id="problem-title">Stop Wasting Time on Complicated Workflows</span>}
-          lede="Most teams juggle too many tools and too much manual work. Sound familiar?"
+          title={<span id="problem-title">Still Billing by Hand or in a Notebook?</span>}
+          lede="Handwritten bills, guessed stock and udhaar in a diary cost shops time and money every day. Sound familiar?"
         />
         <div className="grid grid-4">
           {problems.map((p, i) => (
@@ -223,8 +223,8 @@ export function FeaturesSection({ features, id = "features", showLinks = true }:
       <div className="container">
         <SectionHead
           eyebrow="Features"
-          title={<span id={`${id}-title`}>Everything You Need in One Powerful Platform</span>}
-          lede="A complete toolkit to run your work — designed to be powerful for experts and simple for everyone else."
+          title={<span id={`${id}-title`}>Billing, Stock, Udhaar & Reports in One App</span>}
+          lede="Everything a shop needs to bill customers, track stock and know its profit — simple enough for anyone at the counter."
         />
         <div className="features-grid">
           {features.map((f, i) => (
@@ -254,8 +254,8 @@ export function HowItWorks() {
       <div className="container">
         <SectionHead
           eyebrow="How it works"
-          title={<span id="how-title">Get Started in Minutes</span>}
-          lede="No lengthy implementation projects. Three simple steps and your team is up and running."
+          title={<span id="how-title">Start Billing in Minutes</span>}
+          lede="No setup, no account and no internet needed. Download, add your products and make your first bill."
         />
         <ol className="steps">
           {steps.map((s, i) => (
@@ -290,10 +290,10 @@ export function BenefitsSection() {
         <div className="benefits__intro reveal">
           <p className="eyebrow">Outcomes</p>
           <h2 id="benefits-title" className="h2">
-            Designed to Help Your Business Move Forward
+            Less Paperwork, Fewer Mistakes, More Profit
           </h2>
           <p className="lede">
-            Features matter, but results matter more. Here&apos;s what teams can expect when their work lives in one place.
+            Here&apos;s what changes when your bills, stock and udhaar live in one app instead of notebooks and memory.
           </p>
           <div className="btn-row mt-8">
             <Link href="/solutions" className="btn btn--secondary">
@@ -399,7 +399,7 @@ export function SecuritySection() {
             Your Data. Protected.
           </h2>
           <p className="lede">
-            Security is built into every layer of the platform, so you can focus on your work with confidence.
+            Your shop data stays on your own phone or computer — not on someone else&apos;s server — with easy backups you control.
           </p>
         </div>
         <div className="security-grid">
@@ -472,8 +472,8 @@ export function UseCasesSection({ soft = true }: { soft?: boolean }) {
       <div className="container">
         <SectionHead
           eyebrow="Solutions"
-          title={<span id="usecases-title">Built for Teams of Every Size</span>}
-          lede="Whether you're just getting started or scaling across departments, the platform adapts to how you work."
+          title={<span id="usecases-title">An Edition for Every Kind of Shop</span>}
+          lede="Optical, clothing and retail, services or a busy counter — each edition is built around how that shop really works."
         />
         <div className="grid grid-4">
           {useCases.map((u, i) => (

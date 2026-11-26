@@ -84,9 +84,12 @@ export const siteConfig = {
 
   seo: {
     titleTemplate: "%s — Adminuscurator",
-    defaultTitle: "Adminuscurator — Offline Shop Software (Billing, Stock & Accounts)",
+    defaultTitle: "Offline Billing & Inventory Software for Shops in India | Adminuscurator",
     twitterHandle: "", // e.g. "@yourbrand"
-    locale: "en_US",
+    locale: "en_IN",
+    /** Search Console / Bing Webmaster verification codes (the content="…" part of their meta tag). */
+    googleVerification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
+    bingVerification: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || "",
   },
 
   /** Analytics IDs come from the environment — never hard-code them. */
@@ -132,6 +135,16 @@ export const footerNav = [
       { label: "Downloads", href: "/downloads" },
       { label: "Integrations", href: "/resources/integrations" },
       { label: "Updates", href: "/resources/updates" },
+    ],
+  },
+  {
+    title: "Software for",
+    links: [
+      { label: "Optical shops", href: "/optical-shop-billing-software" },
+      { label: "Clothing stores", href: "/clothing-store-billing-software" },
+      { label: "Restaurants & cafés", href: "/restaurant-pos-software" },
+      { label: "Gyms, salons & services", href: "/service-business-billing-software" },
+      { label: "Offline billing", href: "/offline-billing-software" },
     ],
   },
   {

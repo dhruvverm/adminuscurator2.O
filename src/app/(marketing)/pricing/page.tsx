@@ -4,8 +4,8 @@ import { FaqSection, FinalCta } from "@/components/marketing/Sections";
 import { PricingSection } from "@/components/marketing/PricingSection";
 
 export const metadata = pageMetadata({
-  title: "Pricing",
-  description: "Simple, one-time pricing — 1 month, 6 months or lifetime access. Every plan includes all features.",
+  title: "Pricing: 1 Month, 6 Months or Lifetime",
+  description: "Simple pricing for Adminuscurator: ₹1,500 for 1 month, ₹8,000 for 6 months or ₹25,000 lifetime. Every plan has all features. Free trial, no account needed.",
   path: "/pricing",
 });
 

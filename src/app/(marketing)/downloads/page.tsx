@@ -6,8 +6,8 @@ import { FinalCta, PageHero } from "@/components/marketing/Sections";
 import { DownloadsGrid } from "@/components/downloads/DownloadsGrid";
 
 export const metadata = pageMetadata({
-  title: "Downloads",
-  description: `Download ${siteConfig.name} apps for mobile, tablet, Windows and macOS.`,
+  title: "Download Billing App for Android, Windows & Mac",
+  description: "Download Adminuscurator POS, Optical, Retail or Services for Android phones and tablets, Windows PCs and Macs. Works offline; start with a free trial.",
   path: "/downloads",
 });
 

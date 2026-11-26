@@ -6,8 +6,8 @@ import { FinalCta, PageHero, SectionHead, TrustSection } from "@/components/mark
 import { Icon } from "@/components/ui/Icon";
 
 export const metadata = pageMetadata({
-  title: "About",
-  description: `Learn about ${siteConfig.name}, our mission, and the values behind the software we build.`,
+  title: "About Us – Offline Shop Software Built in India",
+  description: "Adminuscurator is a registered Indian MSME building offline billing and inventory apps for optical shops, clothing stores, restaurants and service businesses.",
   path: "/about",
 });
 

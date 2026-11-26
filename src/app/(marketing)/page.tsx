@@ -21,8 +21,8 @@ import { Marquee } from "@/components/marketing/Marquee";
 
 // SEO — edit the homepage title/description here.
 export const metadata = pageMetadata({
-  title: `${siteConfig.name} — Powerful Software for Modern Businesses`,
-  description: `Discover ${siteConfig.name}, powerful software designed to simplify workflows, automate tasks, and help businesses work smarter.`,
+  title: `Offline Billing Software for Shops in India – ${siteConfig.name}`,
+  description: `Billing, stock, udhaar and reports for optical shops, clothing stores, restaurants and service businesses. Works offline on Android, Windows & Mac. Free trial.`,
   path: "/",
   absoluteTitle: true,
 });
@@ -35,9 +35,13 @@ export default async function HomePage() {
     "@type": "SoftwareApplication",
     name: siteConfig.name,
     applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
+    applicationSubCategory: "Billing, inventory and point-of-sale software",
+    operatingSystem: "Android, Windows, macOS",
     description: siteConfig.description,
-    url: siteConfig.url,
+    url: `${siteConfig.url}/`,
+    downloadUrl: `${siteConfig.url}/downloads/`,
+    inLanguage: "en-IN",
+    publisher: { "@id": `${siteConfig.url}/#organization` },
     // Only emit offers with real prices (never placeholders).
     ...(plans.some((p) => p.priceMonthly != null)
       ? {

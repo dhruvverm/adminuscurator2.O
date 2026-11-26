@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const page = resourcePages.find((p) => p.slug === slug);
   if (!page) return {};
-  return pageMetadata({ title: page.title, description: page.description, path: `/resources/${page.slug}` });
+  return pageMetadata({ title: page.title, description: page.description, path: `/resources/${page.slug}`, noIndex: page.noIndex });
 }
 
 export default async function ResourcePage({ params }: { params: Promise<{ slug: string }> }) {

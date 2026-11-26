@@ -7,8 +7,8 @@ import { ShowcaseSection } from "@/components/marketing/ShowcaseSection";
 import { Icon } from "@/components/ui/Icon";
 
 export const metadata = pageMetadata({
-  title: "Features",
-  description: "Offline billing, stock, customers, credit (udhaar), reports and backup — everything you need to run your shop, in one free app.",
+  title: "Features: Billing, Stock, Udhaar & Reports",
+  description: "Fast offline billing, stock with low-stock alerts, customer udhaar (credit), expenses, WhatsApp bills, thermal printing and reports — on Android, Windows and Mac.",
   path: "/features",
 });
 

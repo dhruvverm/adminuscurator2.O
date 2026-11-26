@@ -3,8 +3,8 @@ import { jsonLd, pageMetadata } from "@/lib/seo";
 import { FaqSection, FinalCta } from "@/components/marketing/Sections";
 
 export const metadata = pageMetadata({
-  title: "FAQ",
-  description: "Answers to common questions about the platform, pricing, security, integrations and support.",
+  title: "FAQ – Offline Billing & Inventory Software",
+  description: "Answers about Adminuscurator: offline use, editions, devices, backup and data safety, printers, WhatsApp bills, pricing and the free trial.",
   path: "/faq",
 });
 

@@ -19,7 +19,8 @@ export function pageMetadata({
   noIndex?: boolean;
   absoluteTitle?: boolean;
 }): Metadata {
-  const url = `${siteConfig.url}${path === "/" ? "" : path}`;
+  // The site is exported with trailing slashes, so the canonical address ends in "/" too.
+  const url = `${siteConfig.url}${path === "/" ? "/" : path.replace(/\/?$/, "/")}`;
   const fullTitle = absoluteTitle ? title : `${title} — ${siteConfig.name}`;
   return {
     title: absoluteTitle ? { absolute: title } : title,
@@ -40,6 +41,29 @@ export function pageMetadata({
       site: siteConfig.seo.twitterHandle || undefined,
     },
     robots: noIndex ? { index: false, follow: false } : undefined,
+  };
+}
+
+/** BreadcrumbList for an inner page: Home › … › this page. */
+export function breadcrumbLd(items: { name: string; path: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [{ name: "Home", path: "/" }, ...items].map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: it.name,
+      item: `${siteConfig.url}${it.path === "/" ? "/" : it.path.replace(/\/?$/, "/")}`,
+    })),
+  };
+}
+
+/** FAQPage structured data from question/answer pairs. */
+export function faqLd(faqs: { question: string; answer: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })),
   };
 }
 

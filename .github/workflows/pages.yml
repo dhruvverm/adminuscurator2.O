@@ -36,11 +36,16 @@ jobs:
         env:
           NEXT_PUBLIC_STATIC_EXPORT: "true"
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-          NEXT_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
+          # Always the https address: GitHub reports http:// here while "Enforce HTTPS" is off, which
+          # made every canonical, sitemap and social-preview URL http.
+          NEXT_PUBLIC_SITE_URL: https://adminuscurator.com
           # Optional — set under Settings → Secrets and variables → Actions → Variables
           NEXT_PUBLIC_FORM_ENDPOINT: ${{ vars.FORM_ENDPOINT }}
           NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
           NEXT_PUBLIC_GTM_ID: ${{ vars.GTM_ID }}
+          # Search Console / Bing Webmaster verification codes (only the content="…" value)
+          NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
+          NEXT_PUBLIC_BING_SITE_VERIFICATION: ${{ vars.BING_SITE_VERIFICATION }}
           NEXT_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:

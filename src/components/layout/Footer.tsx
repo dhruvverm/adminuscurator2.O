@@ -20,8 +20,8 @@ export function Footer() {
           <div className="footer-brand">
             <Logo />
             <p>
-              Powerful, easy-to-use software that helps modern teams streamline workflows, automate routine work and
-              make better decisions.
+              Offline billing, inventory and udhaar software for optical shops, clothing stores, restaurants and service
+              businesses across India. Works on Android, Windows and Mac.
             </p>
           </div>
           {footerNav.map((col) => (
